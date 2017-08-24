@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using SongsToFluro.Elvanto;
 
 namespace SongsToFluro
 {
@@ -132,6 +133,34 @@ namespace SongsToFluro
                     foreach (Elvanto.File file in arr.files.file)
                     {
                         files.Add(file);
+
+                        ProcessIndividualKeyFiles(id, files);
+                    }
+
+                }
+
+            }
+        }
+
+        private static void ProcessIndividualKeyFiles(string id, List<File> files)
+        {
+            using (WebClient piuclient = new WebClient())
+            {
+                piuclient.UseDefaultCredentials = true;
+                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                logger.Info($"Getting Key Files for Arrangement {id}");
+                string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
+                string arrangementresult = piuclient.UploadString(ElvantoKeysURI, "POST", poststring);
+
+                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.IndividualArrangement.RootObject>(arrangementresult);
+                foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangement)
+                {
+                    foreach (Elvanto.File file in arr.files.file)
+                    {
+                        files.Add(file);
+
+                        ProcessIndividualKeyFiles(id, files);
                     }
 
                 }
