@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Elvanto
+namespace SongsToFluro.Elvanto
 {
     public class Location
     {

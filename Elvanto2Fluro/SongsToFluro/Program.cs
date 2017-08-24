@@ -1,4 +1,4 @@
-﻿using Elvanto;
+﻿
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
@@ -6,10 +6,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+
 using System.Text;
 using System.Threading.Tasks;
 using SongsToFluro.Elvanto;
 using System.Threading;
+using SongsToFluro.Fluro;
+using System.Net.Http;
+using System.IO;
 
 namespace SongsToFluro
 {
@@ -23,6 +27,11 @@ namespace SongsToFluro
         private static string ElvantoSongIndividualArangementURI = "https://api.elvanto.com/v1/songs/arrangements/getInfo.json";
         private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getArrangement.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
+
+        private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
+        private static string FluroSongURI = "https://apiv2.fluro.io/content/song/";
+        private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
+        private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
 
         static void Main(string[] args)
         {
@@ -41,16 +50,16 @@ namespace SongsToFluro
 
             Fluro.Realm realm = new Fluro.Realm();
             realm._id = "5923eaf4319df62ecc6f8005";
-            realm.title = "Creative";
-            realm.bgColor = "#e2a3ff";
-            realm.color = "#7f12b3";
-            realm._type = "realm";
+            //realm.title = "Creative";
+            //realm.bgColor = "#e2a3ff";
+            //realm.color = "#7f12b3";
+            //realm._type = "realm";
 
 
 
-            var rootobj = JsonConvert.DeserializeObject<RootObject>(stringFullOfJson);
+            var rootobj = JsonConvert.DeserializeObject<Elvanto.RootObject>(stringFullOfJson);
 
-            List<Fluro.RootObject> FluroSongs = new List<Fluro.RootObject>();
+            
 
             foreach (Song song in rootobj.songs.song) {
                 logger.Info($"{song.id} {song.title}");
@@ -70,6 +79,8 @@ namespace SongsToFluro
                 newsong.data.album = song.album;
                 newsong.data.ccli = song.number;
 
+                List<Elvanto.File> elvantofiles = new List<Elvanto.File>();
+
                 Thread.Sleep(2000);
                 using (WebClient newclient = new WebClient())
                 {
@@ -82,7 +93,7 @@ namespace SongsToFluro
                     newsong.data.lyrics = new List<object>();
                     newsong.data.lyrics.Add(rootArrangement.arrangements.arrangement.First().lyrics);
 
-                    List<Elvanto.File> elvantofiles = new List<Elvanto.File>();
+                    
 
                     try
                     {
@@ -112,12 +123,76 @@ namespace SongsToFluro
 
                 }
 
-                FluroSongs.Add(newsong);
+                AddSongToFluro(newsong, elvantofiles);
 
             }
 
             Console.ReadLine();
         }
+
+        private static void AddSongToFluro(Fluro.RootObject newsong, List<Elvanto.File> files)
+        {
+            // add files 
+            // first search to see if it already exists
+            foreach (Elvanto.File file in files) {
+                List<string> chordchartids = new List<string>();
+                using (WebClient client = new WebClient())
+                {
+                    client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                    client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+                    string searchresult = client.DownloadString(FluroChordChartPostURI + "search/" + Uri.EscapeUriString(file.title));
+                    if (searchresult.Length < 3)
+                    {
+                        //found
+                        var foundobjects = JsonConvert.DeserializeObject<SongsToFluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
+                        foreach(SongsToFluro.Fluro.SheetMusicSearch.Class1 sheet in foundobjects.Property1)
+                        {
+                            chordchartids.Add(sheet._id);
+                        }
+                    } else
+                    {
+                        byte[] downloadedfile = new byte[1];
+                        // add new sheet
+                        //download existing file
+                        HttpClient dlclient = new HttpClient();
+                        string filetype = "";
+                        dlclient.GetAsync(file.content).ContinueWith(
+                            (requestTask) =>
+                            {
+                                // Get HTTP response from completed task.
+                                HttpResponseMessage response = requestTask.Result;
+                                // Check that response was successful or throw exception
+                                response.EnsureSuccessStatusCode();
+                                // Read content into buffer
+                                response.Content.LoadIntoBufferAsync();
+                                // The content can now be read multiple times using any ReadAs* extension method
+                                downloadedfile = response.Content.ReadAsAsync<byte[]>().Result;
+                                filetype = response.Content.Headers.ContentType.ToString();
+                            }
+                        );
+                        Dictionary<string, object> postParameters = new Dictionary<string, object>();
+                        SheetMusic sheet = new SheetMusic();
+                        sheet.title = file.title;
+                        sheet.realms.Add(FluroCreativeRealm);
+
+                        postParameters.Add("json", JsonConvert.SerializeObject(sheet));
+                        postParameters.Add("?returnPopulated", true);
+                        postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
+                        string userAgent = "Timothy's C# Migrator";
+                        HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroChordChartPostURI, userAgent, postParameters);
+
+                        StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
+                        string fullResponse = responseReader.ReadToEnd();
+                        webResponse.Close();
+                        //need to parse the result and add it to the array
+                    }
+                }
+            }
+
+            //now check for the Song
+        }
+
+
 
         private static void ProcessIndividualArrangementFiles(string id, List<Elvanto.File> files)
         {
@@ -146,17 +221,18 @@ namespace SongsToFluro
             }
         }
 
-        private static void ProcessKeyFiles(string id, List<File> files)
+        private static void ProcessKeyFiles(string id, List<Elvanto.File> files)
         {
             Thread.Sleep(2000);
-            using (WebClient piuclient = new WebClient())
+            using (WebClient client = new WebClient())
             {
-                piuclient.UseDefaultCredentials = true;
-                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                
+                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                client.UseDefaultCredentials = true;
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
                 logger.Info($"Getting Key Files for Arrangement {id}");
                 string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
-                string keyresult = piuclient.UploadString(ElvantoKeysURI, "POST", poststring);
+                string keyresult = client.UploadString(ElvantoKeysURI, "POST", poststring);
 
                 var rootkey = JsonConvert.DeserializeObject<Elvanto.Key.RootObject>(keyresult);
 
@@ -183,17 +259,17 @@ namespace SongsToFluro
             }
         }
 
-        private static void ProcessIndividualKeyFiles(string id, List<File> files)
+        private static void ProcessIndividualKeyFiles(string id, List<Elvanto.File> files)
         {
             Thread.Sleep(2000);
-            using (WebClient piuclient = new WebClient())
+            using (WebClient client = new WebClient())
             {
-                piuclient.UseDefaultCredentials = true;
-                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.UseDefaultCredentials = true;
+                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
                 logger.Info($"Getting Key Files for Arrangement {id}");
                 string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
-                string keyresult = piuclient.UploadString(ElvantoIndividualKeyURI, "POST", poststring);
+                string keyresult = client.UploadString(ElvantoIndividualKeyURI, "POST", poststring);
 
                 var rootkey = JsonConvert.DeserializeObject<Elvanto.IndividualKey.RootObject>(keyresult);
 

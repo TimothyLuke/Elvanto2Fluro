@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Fluro
+namespace SongsToFluro.Fluro
 {
     public class External
     {
