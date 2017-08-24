@@ -51,10 +51,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Elvanto\Arrangement\Arrangement.cs" />
+    <Compile Include="Elvanto\File.cs" />
+    <Compile Include="Elvanto\Files.cs" />
+    <Compile Include="Elvanto\IndividualArrangement\IndividualArrangement.cs" />
+    <Compile Include="Elvanto\Key\SongKey.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Song.cs" />
-    <Compile Include="SongCollection.cs" />
+    <Compile Include="Fluro\Song.cs" />
+    <Compile Include="Elvanto\SongCollection.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
