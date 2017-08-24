@@ -119,15 +119,15 @@ namespace SongsToFluro
         {
             using (WebClient piuclient = new WebClient())
             {
-                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 piuclient.UseDefaultCredentials = true;
+                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
                 logger.Info($"Getting Arrangement {id}");
                 string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
                 string arrangementresult = piuclient.UploadString(ElvantoSongIndividualArangementURI, "POST", poststring);
 
                 var rootArrangement = JsonConvert.DeserializeObject<Elvanto.IndividualArrangement.RootObject>(arrangementresult);
-                foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangements.arrangement)
+                foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangement)
                 {
                     foreach (Elvanto.File file in arr.files.file)
                     {

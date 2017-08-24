@@ -27,20 +27,12 @@ namespace SongsToFluro.Elvanto.IndividualArrangement
         public Files files { get; set; }
     }
 
-    public class Arrangements
-    {
-        public int on_this_page { get; set; }
-        public int page { get; set; }
-        public int per_page { get; set; }
-        public int total { get; set; }
-        public List<Arrangement> arrangement { get; set; }
-    }
 
     public class RootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }
-        public Arrangements arrangements { get; set; }
+        public List<Arrangement> arrangement { get; set; }
     }
 
 }

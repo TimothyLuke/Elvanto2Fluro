@@ -54,7 +54,7 @@
     <Compile Include="Elvanto\Arrangement\Arrangement.cs" />
     <Compile Include="Elvanto\File.cs" />
     <Compile Include="Elvanto\Files.cs" />
-    <Compile Include="Elvanto\IndividualArrangement\IndividualArrangement.cs" />
+    <Compile Include="AltElvanto\IndividualArrangement\IndividualArrangement.cs" />
     <Compile Include="Elvanto\Key\SongKey.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
