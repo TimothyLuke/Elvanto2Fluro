@@ -4,10 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SongsToFluro.Elvanto.SongKey
+namespace SongsToFluro.Elvanto.Key
 {
-
-
     public class Key
     {
         public string id { get; set; }
@@ -17,7 +15,7 @@ namespace SongsToFluro.Elvanto.SongKey
         public string key_starting { get; set; }
         public string key_ending { get; set; }
         public string arrangement_id { get; set; }
-        public Files files { get; set; }
+        public object files { get; set; }
     }
 
     public class Keys

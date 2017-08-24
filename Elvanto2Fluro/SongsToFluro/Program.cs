@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using SongsToFluro.Elvanto;
+using System.Threading;
 
 namespace SongsToFluro
 {
@@ -20,7 +21,8 @@ namespace SongsToFluro
         private static string ElvantoSongURI = "https://api.elvanto.com/v1/songs/getAll.json";
         private static string ElvantoSongArrangementURI = "https://api.elvanto.com/v1/songs/arrangements/getAll.json";
         private static string ElvantoSongIndividualArangementURI = "https://api.elvanto.com/v1/songs/arrangements/getInfo.json";
-        private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getArrangement.json"; 
+        private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getArrangement.json";
+        private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
 
         static void Main(string[] args)
         {
@@ -68,6 +70,7 @@ namespace SongsToFluro
                 newsong.data.album = song.album;
                 newsong.data.ccli = song.number;
 
+                Thread.Sleep(2000);
                 using (WebClient newclient = new WebClient())
                 {
                     newclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
@@ -118,6 +121,7 @@ namespace SongsToFluro
 
         private static void ProcessIndividualArrangementFiles(string id, List<Elvanto.File> files)
         {
+            Thread.Sleep(2000);
             using (WebClient piuclient = new WebClient())
             {
                 piuclient.UseDefaultCredentials = true;
@@ -134,7 +138,44 @@ namespace SongsToFluro
                     {
                         files.Add(file);
 
-                        ProcessIndividualKeyFiles(id, files);
+                        ProcessKeyFiles(id, files);
+                    }
+
+                }
+
+            }
+        }
+
+        private static void ProcessKeyFiles(string id, List<File> files)
+        {
+            Thread.Sleep(2000);
+            using (WebClient piuclient = new WebClient())
+            {
+                piuclient.UseDefaultCredentials = true;
+                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                logger.Info($"Getting Key Files for Arrangement {id}");
+                string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
+                string keyresult = piuclient.UploadString(ElvantoKeysURI, "POST", poststring);
+
+                var rootkey = JsonConvert.DeserializeObject<Elvanto.Key.RootObject>(keyresult);
+
+                foreach (Elvanto.Key.Key arr in rootkey.keys.key)
+                {
+                    try
+                    {
+                        JObject fileses = (JObject)arr.files;
+
+
+                        if (fileses.HasValues)
+                        {
+                            ProcessIndividualKeyFiles(arr.id, files);
+
+                            
+                        }
+                    } catch (InvalidCastException ex)
+                    {
+
                     }
 
                 }
@@ -144,27 +185,25 @@ namespace SongsToFluro
 
         private static void ProcessIndividualKeyFiles(string id, List<File> files)
         {
+            Thread.Sleep(2000);
             using (WebClient piuclient = new WebClient())
             {
                 piuclient.UseDefaultCredentials = true;
                 piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
                 logger.Info($"Getting Key Files for Arrangement {id}");
-                string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
-                string arrangementresult = piuclient.UploadString(ElvantoKeysURI, "POST", poststring);
+                string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
+                string keyresult = piuclient.UploadString(ElvantoIndividualKeyURI, "POST", poststring);
 
-                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.IndividualArrangement.RootObject>(arrangementresult);
-                foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangement)
+                var rootkey = JsonConvert.DeserializeObject<Elvanto.IndividualKey.RootObject>(keyresult);
+
+                foreach (Elvanto.IndividualKey.Key keys in rootkey.key)
                 {
-                    foreach (Elvanto.File file in arr.files.file)
+                    foreach (Elvanto.File file in keys.files.file)
                     {
                         files.Add(file);
-
-                        ProcessIndividualKeyFiles(id, files);
                     }
-
                 }
-
             }
         }
     }
