@@ -43,6 +43,20 @@ namespace SongsToFluro
             });
 
 
+            MigrateSongs();
+
+            Console.ReadLine();
+        }
+
+        static void MigrateSongs()
+        {
+
+            JsonConvert.DefaultSettings = new Func<JsonSerializerSettings>(() => new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+
 
             WebClient client = new WebClient();
             client.UseDefaultCredentials = true;
@@ -155,7 +169,7 @@ namespace SongsToFluro
                             }
                         } catch (Exception ex)
                         {
-
+                            logger.Info("Could not process \n" + searchresult);
                         }
                     } else
                     {
@@ -266,6 +280,7 @@ namespace SongsToFluro
                 {
                     foreach (Elvanto.File file in arr.files.file)
                     {
+                        logger.Info($"Adding File {file.content}");
                         files.Add(file);
 
                         ProcessKeyFiles(id, files);
@@ -333,6 +348,7 @@ namespace SongsToFluro
                 {
                     foreach (Elvanto.File file in keys.files.file)
                     {
+                        logger.Info($"Adding File {file.content}");
                         files.Add(file);
                     }
                 }
