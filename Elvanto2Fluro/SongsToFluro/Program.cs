@@ -35,6 +35,7 @@ namespace SongsToFluro
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
+        private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
@@ -71,6 +72,8 @@ namespace SongsToFluro
                 .Select(grp => grp.ToList())
                 .ToList();
 
+            //TODO need to change the logic of this.  This creates the contacts then the families.  Need to create the family then create the contacts with the family link.
+
             foreach (var family in groupedFamilyList)
             {
                 bool related = true;
@@ -100,7 +103,7 @@ namespace SongsToFluro
             };
             Fluro.Family.RootObject newfamily = new Fluro.Family.RootObject
             {
-                items = new List<Contact>(),
+                items = new List<string>(),
                 phoneNumbers = new List<string>(),
                 emails = new List<string>(),
                 address = new Address(),
@@ -136,12 +139,13 @@ namespace SongsToFluro
                 {
                     contact.status = "active";
                 }
-                newfamily.items.Add(contact);
+
+                newfamily.items.Add(PerformFluroPersonUpload(contact));
 
                 newfamily = UpdateFluroFamily(person, related, newfamily);
             }
 
-            
+            PerformFluroFamilyUpload(newfamily);
 
         }
 
@@ -178,7 +182,7 @@ namespace SongsToFluro
 
             if (!related)
             {
-                PerformFluroUpload(family);
+                PerformFluroFamilyUpload(family);
 
                 family = new Fluro.Family.RootObject();
 
@@ -193,7 +197,7 @@ namespace SongsToFluro
                 };
 
 
-                family.items = new List<Contact>();
+                family.items = new List<string>();
                 family.phoneNumbers = new List<string>();
                 family.address = new Address();
                 family.emails = new List<string>();
@@ -202,7 +206,7 @@ namespace SongsToFluro
             return family;
         }
 
-        private static void PerformFluroUpload(Fluro.Family.RootObject family)
+        private static void PerformFluroFamilyUpload(Fluro.Family.RootObject family)
         {
             WebClient client = new WebClient();
             client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
@@ -211,6 +215,21 @@ namespace SongsToFluro
             string preuploadJson = JsonConvert.SerializeObject(family);
             logger.Info(preuploadJson);
             string stringFullOfJson = client.UploadString(FluroFamilyURI, preuploadJson);
+
+        }
+
+        private static string PerformFluroPersonUpload(Fluro.Family.Contact contact)
+        {
+            WebClient client = new WebClient();
+            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+            client.UseDefaultCredentials = true;
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            string preuploadJson = JsonConvert.SerializeObject(contact);
+            logger.Info(preuploadJson);
+            string stringFullOfJson = client.UploadString(FluroContactURI, preuploadJson);
+
+
+            return JsonConvert.DeserializeObject<Fluro.Family.Contact>(stringFullOfJson)._id;
 
         }
 

@@ -48,7 +48,7 @@ namespace SongsToFluro.Fluro.Family
         public ManagedAuthor managedAuthor { get; set; }
         public string updatedBy { get; set; }
         public List<object> distinctFrom { get; set; }
-        public List<Contact> items { get; set; }
+        public List<string> items { get; set; }
         public bool samePostal { get; set; }
         public Address address { get; set; }
         public List<string> emails { get; set; }
