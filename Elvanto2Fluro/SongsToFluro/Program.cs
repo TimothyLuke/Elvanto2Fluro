@@ -30,6 +30,7 @@ namespace SongsToFluro
 
         private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song/";
+        private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
 
@@ -140,8 +141,9 @@ namespace SongsToFluro
                 {
                     client.Headers[HttpRequestHeader.ContentType] = "application/json";
                     client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                    string searchresult = client.DownloadString(FluroChordChartPostURI + "search/" + Uri.EscapeUriString(file.title));
-                    if (searchresult.Length < 3)
+                    string searchstring = FluroChordChartPostURI + "/search/" + Uri.EscapeUriString(file.title);
+                    string searchresult = client.DownloadString(searchstring);
+                    if (searchresult.Length >= 3)
                     {
                         //found
                         var foundobjects = JsonConvert.DeserializeObject<SongsToFluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
@@ -151,40 +153,42 @@ namespace SongsToFluro
                         }
                     } else
                     {
-                        byte[] downloadedfile = new byte[1];
+                        
                         // add new sheet
                         //download existing file
                         HttpClient dlclient = new HttpClient();
-                        string filetype = "";
-                        dlclient.GetAsync(file.content).ContinueWith(
-                            (requestTask) =>
-                            {
-                                // Get HTTP response from completed task.
-                                HttpResponseMessage response = requestTask.Result;
-                                // Check that response was successful or throw exception
-                                response.EnsureSuccessStatusCode();
-                                // Read content into buffer
-                                response.Content.LoadIntoBufferAsync();
-                                // The content can now be read multiple times using any ReadAs* extension method
-                                downloadedfile = response.Content.ReadAsAsync<byte[]>().Result;
-                                filetype = response.Content.Headers.ContentType.ToString();
-                            }
-                        );
-                        Dictionary<string, object> postParameters = new Dictionary<string, object>();
-                        SheetMusic sheet = new SheetMusic();
-                        sheet.title = file.title;
-                        sheet.realms.Add(FluroCreativeRealm);
+                        
+                        HttpResponseMessage response = new HttpResponseMessage();
 
-                        postParameters.Add("json", JsonConvert.SerializeObject(sheet));
-                        postParameters.Add("?returnPopulated", true);
-                        postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
-                        string userAgent = "Timothy's C# Migrator";
-                        HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroChordChartPostURI, userAgent, postParameters);
+                        response = dlclient.GetAsync(file.content).Result;
+                        if (response.IsSuccessStatusCode)
+                        {
+                            //response.Content.ReadAsStringAsync().Result.Replace("\"", string.Empty);
+                            //mybytearray = Convert.FromBase64String(result);
+                            byte[] downloadedfile = response.Content.ReadAsByteArrayAsync().Result;
+                            string filetype = "";
+                            filetype = response.Content.Headers.ContentType.ToString();
+                            
 
-                        StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
-                        string fullResponse = responseReader.ReadToEnd();
-                        webResponse.Close();
-                        //need to parse the result and add it to the array
+
+                            Dictionary<string, object> postParameters = new Dictionary<string, object>();
+                            SheetMusic sheet = new SheetMusic();
+                            sheet.title = file.title;
+                            sheet.realms = new List<string>();
+                            sheet.realms.Add(FluroCreativeRealm);
+                            string jsonsheet = JsonConvert.SerializeObject(sheet);
+                            postParameters.Add("json", jsonsheet);
+                            postParameters.Add("?returnPopulated", true);
+                            postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
+                            string userAgent = "Timothy's C# Migrator";
+                            HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroFileUploadURI, userAgent, postParameters, FluroAPIKey);
+
+                            StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
+                            string fullResponse = responseReader.ReadToEnd();
+                            webResponse.Close();
+                            //need to parse the result and add it to the array
+                        }
+
                     }
                 }
             }
@@ -213,7 +217,7 @@ namespace SongsToFluro
                     {
                         files.Add(file);
 
-                        ProcessKeyFiles(id, files);
+                        //ProcessKeyFiles(id, files);
                     }
 
                 }
