@@ -52,11 +52,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Elvanto\Arrangement\Arrangement.cs" />
+    <Compile Include="Fluro\Family.cs" />
     <Compile Include="Elvanto\File.cs" />
     <Compile Include="Elvanto\Files.cs" />
     <Compile Include="Elvanto\IndividualArrangement\IndividualArrangement.cs" />
     <Compile Include="Elvanto\Key\IndividualKey.cs" />
     <Compile Include="Elvanto\Key\Key.cs" />
+    <Compile Include="Elvanto\People.cs" />
     <Compile Include="Fluro\FluroFile.cs" />
     <Compile Include="Fluro\FoundSheetMusic.cs" />
     <Compile Include="FormUpload.cs" />
@@ -64,6 +66,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Fluro\Song.cs" />
     <Compile Include="Elvanto\SongCollection.cs" />
+    <Compile Include="StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

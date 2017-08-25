@@ -14,6 +14,7 @@ using System.Threading;
 using SongsToFluro.Fluro;
 using System.Net.Http;
 using System.IO;
+using SongsToFluro.Fluro.Family;
 
 namespace SongsToFluro
 {
@@ -27,12 +28,16 @@ namespace SongsToFluro
         private static string ElvantoSongIndividualArangementURI = "https://api.elvanto.com/v1/songs/arrangements/getInfo.json";
         private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getAll.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
+        private static string ElvantoPeopleURI = "https://api.elvanto.com/v1/people/getAll.json";
 
         private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
+        private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
+
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
+        private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
 
         static void Main(string[] args)
         {
@@ -43,18 +48,162 @@ namespace SongsToFluro
             });
 
 
-            MigrateSongs();
+            //MigrateSongs();
+            MigratePeople();
 
             Console.ReadLine();
         }
 
+        static void MigratePeople()
+        {
+            WebClient client = new WebClient();
+            client.UseDefaultCredentials = true;
+            client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            string stringFullOfJson = client.UploadString(ElvantoPeopleURI, "{\"fields\": [\"gender\", \"birthday\", \"marital_status\", \"home_address\", \"home_address2\", \"home_city\", \"home_state\", \"home_postcode\", \"departments\", \"custom_95d1c84c-6196-11e5-9d36-06ba798128be\"] }");
+
+            
+            var rootobj = JsonConvert.DeserializeObject<Elvanto.People.RootObject>(stringFullOfJson);
+            var groupedFamilyList = rootobj.people.person
+                .GroupBy(u => u.family_id)
+                .Select(grp => grp.ToList())
+                .ToList();
+
+            foreach (var family in groupedFamilyList)
+            {
+                bool related = true;
+                if (family.First().family_id == "")
+                {
+                    logger.Info("Group None - {0}",  family.First().lastname);
+                    related = false;
+                }
+                else
+                {
+                    logger.Info("Group {0} - {1}", family.First().family_id, family.First().lastname);
+                }
+                foreach (var person in family)
+                {
+                    logger.Info("  {0} - {1} {2}", person.id, person.firstname, person.lastname);
+
+                }
+                AddPersonToFluro(family, related);
+            }
+        }
+
+        static void AddPersonToFluro(List<Elvanto.People.Person> family, bool related)
+        {
+            Fluro.Realm realm = new Fluro.Realm();
+            realm._id = FluroRidgehavenRealm;
+            Fluro.Family.RootObject newfamily = new Fluro.Family.RootObject();
+            newfamily.items = new List<Contact>();
+            newfamily.phoneNumbers = new List<string>();
+            newfamily.emails = new List<string>();
+            newfamily.address = new Address();
+            newfamily._type = "family";
+            newfamily.realms = new List<Realm>();
+            newfamily.realms.Add(realm);
+            
+
+            
+            foreach( Elvanto.People.Person person in family){
+
+                Fluro.Family.Contact contact = new Fluro.Family.Contact();
+                contact.data = new Fluro.Family.ContactData();
+                contact.realms = new List<string>();
+                contact.realms.Add(realm._id);
+                contact._type = "contact";
+
+                contact.data.channel = "TimothyLuke Elvanto2Fluro";
+                contact.data.importId = person.id;
+                contact.title = person.firstname.ToLower() + " " + person.lastname.ToLower();
+                contact.lastName = person.lastname.ToLower();
+                contact.firstName = person.firstname.ToLower();
+                contact.gender = person.gender;
+                contact.dob = person.birthday;
+                contact._type = "contact";
+                if (person.archived > 0 )
+                {
+                    contact.status = "archived";
+                } else
+                {
+                    contact.status = "active";
+                }
+                newfamily.items.Add(contact);
+
+                newfamily = UpdateFluroFamily(person, related, newfamily);
+            }
+
+            
+
+        }
+
+        private static Fluro.Family.RootObject UpdateFluroFamily( Elvanto.People.Person person, bool related, Fluro.Family.RootObject family)
+        {
+            if (family.title == null )
+            {
+                family.title = person.lastname;
+            }
+            family.firstLine = family.firstLine + ", " + person.firstname;
+            if (family.firstLine.Left(2) == ", ")
+            {
+                family.firstLine = family.firstLine.Substring(2);
+            }
+            family.emails.Add(person.email);
+            if(family.address.addressLine1 == null)
+            {
+                family.address.addressLine1 = person.home_address;
+                family.address.addressLine2 = person.home_address2;
+                family.address.suburb = person.home_city;
+                family.address.state = person.home_state;
+                if (person.home_postcode != "" )
+                { 
+                  family.address.postalCode = Convert.ToInt32(person.home_postcode);
+                }
+                family.address.country = "Australia";
+            }
+
+            family.phoneNumbers.Add(person.mobile);
+            family.phoneNumbers.Add(person.phone);
+           
+
+
+
+            if (!related)
+            {
+                PerformFluroUpload(family);
+
+                family = new Fluro.Family.RootObject();
+
+
+                Fluro.Realm realm = new Fluro.Realm();
+                realm._id = FluroRidgehavenRealm;
+                family.realms = new List<Realm>();
+                family.realms.Add(realm);
+
+                
+                family.items = new List<Contact>();
+                family.phoneNumbers = new List<string>();
+                family.address = new Address();
+                family.emails = new List<string>();
+
+            }
+            return family;
+        }
+
+        private static void PerformFluroUpload(Fluro.Family.RootObject family)
+        {
+            WebClient client = new WebClient();
+            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+            client.UseDefaultCredentials = true;
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            string preuploadJson = JsonConvert.SerializeObject(family);
+            logger.Info(preuploadJson);
+            string stringFullOfJson = client.UploadString(FluroFamilyURI, preuploadJson);
+
+        }
+
         static void MigrateSongs()
         {
-
-            JsonConvert.DefaultSettings = new Func<JsonSerializerSettings>(() => new JsonSerializerSettings()
-            {
-                NullValueHandling = NullValueHandling.Ignore
-            });
 
 
 
@@ -64,7 +213,7 @@ namespace SongsToFluro
             string stringFullOfJson = client.DownloadString(ElvantoSongURI);
 
             Fluro.Realm realm = new Fluro.Realm();
-            realm._id = "5923eaf4319df62ecc6f8005";
+            realm._id = FluroCreativeRealm;
 
 
 
