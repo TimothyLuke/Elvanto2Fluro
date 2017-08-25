@@ -57,6 +57,7 @@
     <Compile Include="Elvanto\IndividualArrangement\IndividualArrangement.cs" />
     <Compile Include="Elvanto\Key\IndividualKey.cs" />
     <Compile Include="Elvanto\Key\Key.cs" />
+    <Compile Include="Fluro\FluroFile.cs" />
     <Compile Include="Fluro\FoundSheetMusic.cs" />
     <Compile Include="FormUpload.cs" />
     <Compile Include="Program.cs" />

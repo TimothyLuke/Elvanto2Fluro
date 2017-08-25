@@ -141,7 +141,8 @@ namespace SongsToFluro
                 {
                     client.Headers[HttpRequestHeader.ContentType] = "application/json";
                     client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                    string searchstring = FluroChordChartPostURI + "/search/" + Uri.EscapeUriString(file.title);
+                    string searchstring = FluroChordChartPostURI + "/search/" + Uri.EscapeUriString(file.title).Replace("/"," ");
+
                     string searchresult = client.DownloadString(searchstring);
                     if (searchresult.Length >= 3)
                     {
@@ -173,10 +174,12 @@ namespace SongsToFluro
 
                             Dictionary<string, object> postParameters = new Dictionary<string, object>();
                             SheetMusic sheet = new SheetMusic();
-                            sheet.title = file.title;
+                            sheet.title = file.title.Replace("/", " ");
                             sheet.realms = new List<string>();
                             sheet.realms.Add(FluroCreativeRealm);
+                            sheet.definition = "sheetMusic";
                             string jsonsheet = JsonConvert.SerializeObject(sheet);
+
                             postParameters.Add("json", jsonsheet);
                             postParameters.Add("?returnPopulated", true);
                             postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
@@ -185,8 +188,11 @@ namespace SongsToFluro
 
                             StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
                             string fullResponse = responseReader.ReadToEnd();
+                            logger.Debug(fullResponse);
                             webResponse.Close();
                             //need to parse the result and add it to the array
+                            Fluro.File.RootObject returnedfile = JsonConvert.DeserializeObject<Fluro.File.RootObject>(fullResponse);
+                            chordchartids.Add(returnedfile._id);
                         }
 
                     }
@@ -194,6 +200,8 @@ namespace SongsToFluro
             }
 
             //now check for the Song
+
+
         }
 
 
