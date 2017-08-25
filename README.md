@@ -7,6 +7,7 @@ Thyis project also assumes you are familiar with:
  - https://developers.fluro.io/
  - Newtonsoft JSON.Net
  - NLog
+ - GitHub Plugin for Visual Studio
 
 To use this in another setting you will need to:
 
@@ -26,3 +27,9 @@ We use a custom field to identify members - custom_95d1c84c-6196-11e5-9d36-06ba7
 
 ## Logging
 Instead of using Console.Writeline this uses the NLog library (https://github.com/NLog/NLog/wiki/Tutorial).  You can use this to log to both screen and file in case you want to more fine tune the console output.
+
+## Getting Started
+Within Visual Studio check out the project from GitHub.  ALl the heavy lifting is within Program.cs
+
+## Why all the RootObject and Names spaces
+Cause I am a nub with JSON.Net and was working to get it to work first.
