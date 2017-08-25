@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -41,6 +42,14 @@ namespace SongsToFluro.Elvanto.People
         public string home_postcode { get; set; }
         public string home_state { get; set; }
         public string marital_status { get; set; }
+        [JsonProperty("custom_95d1c84c-6196-11e5-9d36-06ba798128be")]
+        public VotingConstruct votingMember { get; set; }
+}
+
+    public class VotingConstruct
+    {
+        public string id { get; set; }
+        public string name { get; set; }
     }
 
     public class People

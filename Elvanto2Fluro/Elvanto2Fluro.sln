@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.10
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SongsToFluro", "SongsToFluro\SongsToFluro.csproj", "{4F18BF4A-5FBC-4F4E-8FF5-F5C52345441B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elvanto2Fluro", "SongsToFluro\Elvanto2Fluro.csproj", "{4F18BF4A-5FBC-4F4E-8FF5-F5C52345441B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

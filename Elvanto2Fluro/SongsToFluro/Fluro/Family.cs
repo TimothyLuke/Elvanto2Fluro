@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,13 +18,16 @@ namespace SongsToFluro.Fluro.Family
         public string gender { get; set; }
         public string dob { get; set; }
         public string _type { get; set; }
-        public List<object> tags { get; set; }
+        public List<string> tags { get; set; }
         public List<string> realms { get; set; }
-        public List<object> hashtags { get; set; }
+        public List<string> hashtags { get; set; }
         public string status { get; set; }
-        public List<object> keywords { get; set; }
+        public List<string> keywords { get; set; }
         public string householdRole { get; set; }
         public ContactData data { get; set; }
+        public string family { get; set; }
+        public List<string> phoneNumbers { get; set; }
+        public List<string> emails { get; set; }
     }
 
     public class Address
@@ -69,5 +73,10 @@ namespace SongsToFluro.Fluro.Family
     {
         public string importId { get; set; }
         public string channel { get; set; }
+        public string preferredname { get; set; }
+        public bool volunteer { get; set; }
+        public string photoURL { get; set; }
     }
+
+    
 }

@@ -29,6 +29,9 @@ namespace SongsToFluro
         private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getAll.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
         private static string ElvantoPeopleURI = "https://api.elvanto.com/v1/people/getAll.json";
+        private static string ElvantoMemberCategory = "a9802b8c-2e1b-11e2-9039-ef9e4c9f3a46";
+        
+
 
         private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
@@ -36,6 +39,11 @@ namespace SongsToFluro
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
+
+        private static string FluroVotingMember = "5936300a95402155f8a80346";
+        private static string FluroChurchMember = "5936300005bf991296dabfa5";
+
+    
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
@@ -72,30 +80,114 @@ namespace SongsToFluro
                 .Select(grp => grp.ToList())
                 .ToList();
 
-            //TODO need to change the logic of this.  This creates the contacts then the families.  Need to create the family then create the contacts with the family link.
-
+            
             foreach (var family in groupedFamilyList)
             {
-                bool related = true;
+
+                string familyId = "";
                 if (family.First().family_id == "")
                 {
                     logger.Info("Group None - {0}",  family.First().lastname);
-                    related = false;
+                    
+                    familyId = "";
                 }
                 else
                 {
                     logger.Info("Group {0} - {1}", family.First().family_id, family.First().lastname);
+                    if (familyId == "") {
+                        familyId = AddFamilyToFluro(family.First());
+                    }
                 }
                 foreach (var person in family)
                 {
                     logger.Info("  {0} - {1} {2}", person.id, person.firstname, person.lastname);
+                    AddContactToFluro(person, familyId);
 
                 }
-                AddPersonToFluro(family, related);
+
+                
             }
         }
 
-        static void AddPersonToFluro(List<Elvanto.People.Person> family, bool related)
+        static void AddContactToFluro(Elvanto.People.Person person, string familyId)
+        {
+
+            Fluro.Family.Contact contact = new Fluro.Family.Contact
+            {
+                data = new Fluro.Family.ContactData(),
+                realms = new List<string>{
+                    FluroRidgehavenRealm },
+                phoneNumbers = new List<string>(),
+                emails = new List<string>(),
+            };
+            
+            contact._type = "contact";
+
+            contact.data.channel = "TimothyLuke Elvanto2Fluro";
+            contact.data.importId = person.id;
+            contact.title = person.firstname.ToLower() + " " + person.lastname.ToLower();
+            contact.lastName = person.lastname.ToLower();
+            contact.firstName = person.firstname.ToLower();
+            if (person.gender != "" ) {
+                contact.gender = person.gender;
+            } else
+            {
+                // it has to be either male or female
+                contact.gender = "female";
+            }
+            contact.dob = person.birthday;
+            contact._type = "contact";
+            if (familyId != "")
+            {
+                contact.family = familyId;
+            }
+            if (person.archived > 0)
+            {
+                contact.status = "archived";
+            }
+            else
+            {
+                contact.status = "active";
+            }
+            if (person.deceased > 0)
+            {
+                contact.status = "deceased";
+                
+            }
+            if (person.volunteer > 0)
+            {
+                contact.data.volunteer = true;
+            }
+
+            contact.tags = new List<string>();
+            if (person.category_id == ElvantoMemberCategory)
+            {
+                contact.tags.Add(FluroChurchMember);
+            }
+            if (person.votingMember != null)
+            {
+                if (person.votingMember.name == "Yes")
+                {
+                    contact.tags.Add(FluroVotingMember);
+                }
+            }
+            contact.data.photoURL = person.picture;
+            contact.phoneNumbers.Add(person.mobile);
+            contact.phoneNumbers.Add(person.phone);
+            if (person.email == "" && person.phone == "" && person.mobile == "")
+            {
+                // needs to be something
+                contact.emails.Add("unknown@dev.null");
+            } else
+            {
+                contact.emails.Add(person.email);
+            }
+            
+            contact.data.preferredname = person.preferred_name;
+            PerformFluroPersonUpload(contact);
+        }
+
+        static string AddFamilyToFluro(Elvanto.People.Person person)
         {
             Fluro.Realm realm = new Fluro.Realm
             {
@@ -114,99 +206,41 @@ namespace SongsToFluro
             
 
             
-            foreach( Elvanto.People.Person person in family){
 
-                Fluro.Family.Contact contact = new Fluro.Family.Contact
-                {
-                    data = new Fluro.Family.ContactData(),
-                    realms = new List<string>()
-                };
-                contact.realms.Add(realm._id);
-                contact._type = "contact";
-
-                contact.data.channel = "TimothyLuke Elvanto2Fluro";
-                contact.data.importId = person.id;
-                contact.title = person.firstname.ToLower() + " " + person.lastname.ToLower();
-                contact.lastName = person.lastname.ToLower();
-                contact.firstName = person.firstname.ToLower();
-                contact.gender = person.gender;
-                contact.dob = person.birthday;
-                contact._type = "contact";
-                if (person.archived > 0 )
-                {
-                    contact.status = "archived";
-                } else
-                {
-                    contact.status = "active";
-                }
-
-                newfamily.items.Add(PerformFluroPersonUpload(contact));
-
-                newfamily = UpdateFluroFamily(person, related, newfamily);
-            }
-
-            PerformFluroFamilyUpload(newfamily);
-
-        }
-
-        private static Fluro.Family.RootObject UpdateFluroFamily( Elvanto.People.Person person, bool related, Fluro.Family.RootObject family)
-        {
-            if (family.title == null )
+            if (newfamily.title == null )
             {
-                family.title = person.lastname;
+                newfamily.title = person.lastname;
             }
-            family.firstLine = family.firstLine + ", " + person.firstname;
-            if (family.firstLine.Left(2) == ", ")
+            //newfamily.firstLine = newfamily.firstLine + ", " + person.firstname;
+            //if (newfamily.firstLine.Left(2) == ", ")
+            //{
+            //    newfamily.firstLine = newfamily.firstLine.Substring(2);
+            //}
+            newfamily.emails.Add(person.email);
+            if(newfamily.address.addressLine1 == null)
             {
-                family.firstLine = family.firstLine.Substring(2);
-            }
-            family.emails.Add(person.email);
-            if(family.address.addressLine1 == null)
-            {
-                family.address.addressLine1 = person.home_address;
-                family.address.addressLine2 = person.home_address2;
-                family.address.suburb = person.home_city;
-                family.address.state = person.home_state;
+                newfamily.address.addressLine1 = person.home_address;
+                newfamily.address.addressLine2 = person.home_address2;
+                newfamily.address.suburb = person.home_city;
+                newfamily.address.state = person.home_state;
                 if (person.home_postcode != "" )
-                { 
-                  family.address.postalCode = Convert.ToInt32(person.home_postcode);
+                {
+                    newfamily.address.postalCode = Convert.ToInt32(person.home_postcode);
                 }
-                family.address.country = "Australia";
+                newfamily.address.country = "Australia";
             }
 
-            family.phoneNumbers.Add(person.mobile);
-            family.phoneNumbers.Add(person.phone);
-           
+            newfamily.phoneNumbers.Add(person.mobile);
+            newfamily.phoneNumbers.Add(person.phone);
 
 
 
-            if (!related)
-            {
-                PerformFluroFamilyUpload(family);
-
-                family = new Fluro.Family.RootObject();
 
 
-                Fluro.Realm realm = new Fluro.Realm
-                {
-                    _id = FluroRidgehavenRealm
-                };
-                family.realms = new List<Realm>
-                {
-                    realm
-                };
-
-
-                family.items = new List<string>();
-                family.phoneNumbers = new List<string>();
-                family.address = new Address();
-                family.emails = new List<string>();
-
-            }
-            return family;
+            return PerformFluroFamilyUpload(newfamily);
         }
 
-        private static void PerformFluroFamilyUpload(Fluro.Family.RootObject family)
+        private static string  PerformFluroFamilyUpload(Fluro.Family.RootObject family)
         {
             WebClient client = new WebClient();
             client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
@@ -216,9 +250,11 @@ namespace SongsToFluro
             logger.Info(preuploadJson);
             string stringFullOfJson = client.UploadString(FluroFamilyURI, preuploadJson);
 
+            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
+            return returnId;
         }
 
-        private static string PerformFluroPersonUpload(Fluro.Family.Contact contact)
+        private static void PerformFluroPersonUpload(Fluro.Family.Contact contact)
         {
             WebClient client = new WebClient();
             client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
@@ -229,7 +265,7 @@ namespace SongsToFluro
             string stringFullOfJson = client.UploadString(FluroContactURI, preuploadJson);
 
 
-            return JsonConvert.DeserializeObject<Fluro.Family.Contact>(stringFullOfJson)._id;
+            
 
         }
 
@@ -548,6 +584,26 @@ namespace SongsToFluro
                         files.Add(file);
                     }
                 }
+            }
+        }
+
+        public static T GetFirstInstance<T>(string propertyName, string json)
+        {
+            using (var stringReader = new StringReader(json))
+            using (var jsonReader = new JsonTextReader(stringReader))
+            {
+                while (jsonReader.Read())
+                {
+                    if (jsonReader.TokenType == JsonToken.PropertyName
+                        && (string)jsonReader.Value == propertyName)
+                    {
+                        jsonReader.Read();
+
+                        var serializer = new JsonSerializer();
+                        return serializer.Deserialize<T>(jsonReader);
+                    }
+                }
+                return default(T);
             }
         }
     }
