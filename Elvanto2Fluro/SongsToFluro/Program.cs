@@ -56,9 +56,11 @@ namespace SongsToFluro
 
         static void MigratePeople()
         {
-            WebClient client = new WebClient();
-            client.UseDefaultCredentials = true;
-            client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+            WebClient client = new WebClient
+            {
+                UseDefaultCredentials = true,
+                Credentials = new NetworkCredential(ElvantoAPIKey, "")
+            };
             client.Headers[HttpRequestHeader.ContentType] = "application/json";
             string stringFullOfJson = client.UploadString(ElvantoPeopleURI, "{\"fields\": [\"gender\", \"birthday\", \"marital_status\", \"home_address\", \"home_address2\", \"home_city\", \"home_state\", \"home_postcode\", \"departments\", \"custom_95d1c84c-6196-11e5-9d36-06ba798128be\"] }");
 
@@ -92,24 +94,30 @@ namespace SongsToFluro
 
         static void AddPersonToFluro(List<Elvanto.People.Person> family, bool related)
         {
-            Fluro.Realm realm = new Fluro.Realm();
-            realm._id = FluroRidgehavenRealm;
-            Fluro.Family.RootObject newfamily = new Fluro.Family.RootObject();
-            newfamily.items = new List<Contact>();
-            newfamily.phoneNumbers = new List<string>();
-            newfamily.emails = new List<string>();
-            newfamily.address = new Address();
-            newfamily._type = "family";
-            newfamily.realms = new List<Realm>();
+            Fluro.Realm realm = new Fluro.Realm
+            {
+                _id = FluroRidgehavenRealm
+            };
+            Fluro.Family.RootObject newfamily = new Fluro.Family.RootObject
+            {
+                items = new List<Contact>(),
+                phoneNumbers = new List<string>(),
+                emails = new List<string>(),
+                address = new Address(),
+                _type = "family",
+                realms = new List<Realm>()
+            };
             newfamily.realms.Add(realm);
             
 
             
             foreach( Elvanto.People.Person person in family){
 
-                Fluro.Family.Contact contact = new Fluro.Family.Contact();
-                contact.data = new Fluro.Family.ContactData();
-                contact.realms = new List<string>();
+                Fluro.Family.Contact contact = new Fluro.Family.Contact
+                {
+                    data = new Fluro.Family.ContactData(),
+                    realms = new List<string>()
+                };
                 contact.realms.Add(realm._id);
                 contact._type = "contact";
 
@@ -175,12 +183,16 @@ namespace SongsToFluro
                 family = new Fluro.Family.RootObject();
 
 
-                Fluro.Realm realm = new Fluro.Realm();
-                realm._id = FluroRidgehavenRealm;
-                family.realms = new List<Realm>();
-                family.realms.Add(realm);
+                Fluro.Realm realm = new Fluro.Realm
+                {
+                    _id = FluroRidgehavenRealm
+                };
+                family.realms = new List<Realm>
+                {
+                    realm
+                };
 
-                
+
                 family.items = new List<Contact>();
                 family.phoneNumbers = new List<string>();
                 family.address = new Address();
@@ -207,13 +219,17 @@ namespace SongsToFluro
 
 
 
-            WebClient client = new WebClient();
-            client.UseDefaultCredentials = true;
-            client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+            WebClient client = new WebClient
+            {
+                UseDefaultCredentials = true,
+                Credentials = new NetworkCredential(ElvantoAPIKey, "")
+            };
             string stringFullOfJson = client.DownloadString(ElvantoSongURI);
 
-            Fluro.Realm realm = new Fluro.Realm();
-            realm._id = FluroCreativeRealm;
+            Fluro.Realm realm = new Fluro.Realm
+            {
+                _id = FluroCreativeRealm
+            };
 
 
 
@@ -224,18 +240,22 @@ namespace SongsToFluro
 
             foreach (Song song in rootobj.songs.song) {
                 logger.Info($"{song.id} {song.title}");
-                Fluro.RootObject newsong = new Fluro.RootObject();
+                Fluro.RootObject newsong = new Fluro.RootObject
+                {
 
-                //behold id ad17eee6-3544-11e7-ba01-061a3b9c64af
+                    //behold id ad17eee6-3544-11e7-ba01-061a3b9c64af
 
 
-                newsong.title = song.title;
-                newsong.realms = new List<Fluro.Realm>();
+                    title = song.title,
+                    realms = new List<Fluro.Realm>()
+                };
                 newsong.realms.Add(realm);
-                newsong.data = new Fluro.Data();
-                newsong.data.artist = song.artist;
-                newsong.data.album = song.album;
-                newsong.data.ccli = song.number;
+                newsong.data = new Fluro.Data
+                {
+                    artist = song.artist,
+                    album = song.album,
+                    ccli = song.number
+                };
 
                 List<Elvanto.File> elvantofiles = new List<Elvanto.File>();
 
@@ -248,10 +268,12 @@ namespace SongsToFluro
                     string arrangementresult = client.UploadString(ElvantoSongArrangementURI, "POST", "{\"song_id\": \"" + song.id + "\",    \"files\": true}");
                     var rootArrangement = JsonConvert.DeserializeObject<Elvanto.Arrangement.RootObject>(arrangementresult);
 
-                    newsong.data.lyrics = new List<object>();
-                    newsong.data.lyrics.Add(rootArrangement.arrangements.arrangement.First().lyrics);
+                    newsong.data.lyrics = new List<object>
+                    {
+                        rootArrangement.arrangements.arrangement.First().lyrics
+                    };
 
-                    
+
 
                     try
                     {
@@ -341,9 +363,11 @@ namespace SongsToFluro
 
 
                             Dictionary<string, object> postParameters = new Dictionary<string, object>();
-                            SheetMusic sheet = new SheetMusic();
-                            sheet.title = file.title.Replace("/", " ");
-                            sheet.realms = new List<string>();
+                            SheetMusic sheet = new SheetMusic
+                            {
+                                title = file.title.Replace("/", " "),
+                                realms = new List<string>()
+                            };
                             sheet.realms.Add(FluroCreativeRealm);
                             sheet.definition = "sheetMusic";
                             string jsonsheet = JsonConvert.SerializeObject(sheet);
@@ -371,8 +395,10 @@ namespace SongsToFluro
             newsong.data.sheetMusic = new List<SheetMusic>();
             foreach (string sheetid in chordchartids)
             {
-                SheetMusic sheet = new SheetMusic();
-                sheet._id = sheetid;
+                SheetMusic sheet = new SheetMusic
+                {
+                    _id = sheetid
+                };
                 newsong.data.sheetMusic.Add(sheet);
             }
 
@@ -392,8 +418,10 @@ namespace SongsToFluro
                 else
                 {
                     newsong.realms = new List<Realm>();
-                    Realm creative = new Realm();
-                    creative._id = FluroCreativeRealm;
+                    Realm creative = new Realm
+                    {
+                        _id = FluroCreativeRealm
+                    };
                     newsong.realms.Add(creative);
                     newsong.definition = "song";
                     string upjson = JsonConvert.SerializeObject(newsong);
