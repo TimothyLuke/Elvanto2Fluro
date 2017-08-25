@@ -25,7 +25,7 @@ namespace SongsToFluro
         private static string ElvantoSongURI = "https://api.elvanto.com/v1/songs/getAll.json";
         private static string ElvantoSongArrangementURI = "https://api.elvanto.com/v1/songs/arrangements/getAll.json";
         private static string ElvantoSongIndividualArangementURI = "https://api.elvanto.com/v1/songs/arrangements/getInfo.json";
-        private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getArrangement.json";
+        private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getAll.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
 
         private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
@@ -99,8 +99,12 @@ namespace SongsToFluro
                         {
 
                             // Individual call to get arrangement with files
+                            foreach(Elvanto.Arrangement.Arrangement arrangement in rootArrangement.arrangements.arrangement)
+                            {
 
-                            ProcessIndividualArrangementFiles(rootArrangement.arrangements.arrangement.First().id, elvantofiles);
+                                ProcessIndividualArrangementFiles(arrangement.id, elvantofiles);
+                            }
+
                             foreach (Elvanto.File flz in elvantofiles)
                             {
                                 logger.Info($"{flz.title} {flz.content}");
@@ -278,8 +282,9 @@ namespace SongsToFluro
             using (WebClient client = new WebClient())
             {
                 
-                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                
                 client.UseDefaultCredentials = true;
+                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 client.Headers[HttpRequestHeader.ContentType] = "application/json";
                 logger.Info($"Getting Key Files for Arrangement {id}");
                 string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
