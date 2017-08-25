@@ -29,7 +29,7 @@ namespace SongsToFluro
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
 
         private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
-        private static string FluroSongURI = "https://apiv2.fluro.io/content/song/";
+        private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
@@ -51,10 +51,7 @@ namespace SongsToFluro
 
             Fluro.Realm realm = new Fluro.Realm();
             realm._id = "5923eaf4319df62ecc6f8005";
-            //realm.title = "Creative";
-            //realm.bgColor = "#e2a3ff";
-            //realm.color = "#7f12b3";
-            //realm._type = "realm";
+
 
 
 
@@ -68,9 +65,6 @@ namespace SongsToFluro
 
                 //behold id ad17eee6-3544-11e7-ba01-061a3b9c64af
 
-                //song
-
-                //string arrangements = client.DownloadString("{\"song_id\": \"" + song.id + "\",    \"files\": true}");
 
                 newsong.title = song.title;
                 newsong.realms = new List<Fluro.Realm>();
@@ -133,10 +127,11 @@ namespace SongsToFluro
 
         private static void AddSongToFluro(Fluro.RootObject newsong, List<Elvanto.File> files)
         {
+            List<string> chordchartids = new List<string>();
             // add files 
             // first search to see if it already exists
             foreach (Elvanto.File file in files) {
-                List<string> chordchartids = new List<string>();
+                
                 using (WebClient client = new WebClient())
                 {
                     client.Headers[HttpRequestHeader.ContentType] = "application/json";
@@ -147,10 +142,16 @@ namespace SongsToFluro
                     if (searchresult.Length >= 3)
                     {
                         //found
-                        var foundobjects = JsonConvert.DeserializeObject<SongsToFluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
-                        foreach(SongsToFluro.Fluro.SheetMusicSearch.Class1 sheet in foundobjects.Property1)
+                        try
                         {
-                            chordchartids.Add(sheet._id);
+                            var foundobjects = JsonConvert.DeserializeObject<SongsToFluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
+                            foreach (SongsToFluro.Fluro.SheetMusicSearch.Class1 sheet in foundobjects.Property1)
+                            {
+                                chordchartids.Add(sheet._id);
+                            }
+                        } catch (Exception ex)
+                        {
+
                         }
                     } else
                     {
@@ -199,8 +200,46 @@ namespace SongsToFluro
                 }
             }
 
-            //now check for the Song
+            //Add SheetMusic to Song
+            newsong.data.sheetMusic = new List<SheetMusic>();
+            foreach (string sheetid in chordchartids)
+            {
+                SheetMusic sheet = new SheetMusic();
+                sheet._id = sheetid;
+                newsong.data.sheetMusic.Add(sheet);
+            }
 
+            //now check for the Song
+            using (WebClient client = new WebClient())
+            {
+                newsong.title = newsong.title.Replace("/", " ");
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+                string searchstring = FluroSongURI + "/search/" + Uri.EscapeUriString(newsong.title);
+                string searchresult = client.DownloadString(searchstring);
+                if (searchresult.Length >= 3)
+                {
+                    //found
+                    logger.Info("Song Found skipping.");
+                }
+                else
+                {
+                    newsong.realms = new List<Realm>();
+                    Realm creative = new Realm();
+                    creative._id = FluroCreativeRealm;
+                    newsong.realms.Add(creative);
+                    newsong.definition = "song";
+                    string upjson = JsonConvert.SerializeObject(newsong);
+                    logger.Info(upjson);
+                    using (WebClient upclient = new WebClient())
+                    {
+                        upclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                        upclient.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+
+                        upclient.UploadString(FluroSongURI, "POST", upjson);
+                    }
+                }
+            }
 
         }
 
@@ -225,7 +264,7 @@ namespace SongsToFluro
                     {
                         files.Add(file);
 
-                        //ProcessKeyFiles(id, files);
+                        ProcessKeyFiles(id, files);
                     }
 
                 }
