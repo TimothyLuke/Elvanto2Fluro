@@ -43,7 +43,7 @@ namespace Elvanto2Fluro
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
         private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
-        private static string FluroTeamURI = "https://apiv2.fluro.io/content/group";
+        private static string FluroTeamURI = "https://apiv2.fluro.io/content/team";
         private static string FluroTeamJoinURI = "https://apiv2.fluro.io/teams/{0}/join";
         private static string FluroOldMemberIdQuery = "https://apiv2.fluro.io/content/_query/59a135a9e64e6d71468b8bb2?noCache=true&variables[elvantoId]=";
 
@@ -62,9 +62,9 @@ namespace Elvanto2Fluro
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            //logger.Info("==================================================Starting Songs=================================================");
-            //MigrateSongs();
-            //logger.Info("=====================================================End Songs===================================================");
+            logger.Info("==================================================Starting Songs=================================================");
+            MigrateSongs();
+            logger.Info("=====================================================End Songs===================================================");
             logger.Info("=================================================Starting People=================================================");
             MigratePeople();
             logger.Info("===================================================End People====================================================");
@@ -80,10 +80,10 @@ namespace Elvanto2Fluro
             // Get Groups
             using (WebClient client = new WebClient())
             {
-                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 client.UseDefaultCredentials = true;
+                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
                 client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                string arrangementresult = client.UploadString(ElvantoSongArrangementURI, "POST", "{\"fields\":[\"people\"]}");
+                string arrangementresult = client.UploadString(ElvantoGroupURI, "POST", "{\"fields\":[\"people\"]}");
                 var rootArrangement = JsonConvert.DeserializeObject<Elvanto.GroupCollection.GroupRootobject>(arrangementresult);
                 foreach(Elvanto.GroupCollection.Group group in rootArrangement.groups.group)
                 {
@@ -113,10 +113,15 @@ namespace Elvanto2Fluro
             team.realms.Add(realm);
 
             string teamId = PerformFluroTeamUpload(team);
-            List<Elvanto.People.Person> people = JsonConvert.DeserializeObject<List<Elvanto.People.Person>>(group.people.ToString());
-            foreach(var person in people)
+            string peoplestring = group.people.ToString();
+            logger.Debug(peoplestring);
+            if (peoplestring.Length > 2)
             {
-                AddPersonToFluroGroup(person.id, teamId);
+                Elvanto.People.People people = JsonConvert.DeserializeObject<Elvanto.People.People>(peoplestring);
+                foreach (var person in people.person)
+                {
+                    AddPersonToFluroGroup(person.id, teamId);
+                }
             }
 
         }
@@ -139,17 +144,22 @@ namespace Elvanto2Fluro
 
         private static void PerformFluroTeamJoin(string id, string teamId)
         {
-            WebClient client = new WebClient
+            if (id != null)
             {
-                UseDefaultCredentials = true,
 
-            };
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-            string jsontoupload = $"{{ \"_id\":\"{id}\"}}";
 
-            logger.Debug(jsontoupload);
-            string stringFullOfJson = client.UploadString(String.Format(FluroTeamJoinURI, teamId), jsontoupload);
+                WebClient client = new WebClient
+                {
+                    UseDefaultCredentials = true,
+
+                };
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+                string jsontoupload = $"{{ \"_id\":\"{id}\"}}";
+
+                logger.Debug(jsontoupload);
+                string stringFullOfJson = client.UploadString(String.Format(FluroTeamJoinURI, teamId), jsontoupload);
+            }
         }
 
         private static string PerformFluroTeamUpload(Team team)
