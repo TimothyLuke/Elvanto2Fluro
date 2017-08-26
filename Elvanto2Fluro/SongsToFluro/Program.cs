@@ -42,6 +42,7 @@ namespace Elvanto2Fluro
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
         private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
 
+        private static string FluroContentErrorTag = "59a136abe64e6d71468b90a0";
         private static string FluroVotingMember = "5936300a95402155f8a80346";
         private static string FluroChurchMember = "5936300005bf991296dabfa5";
 
@@ -135,7 +136,7 @@ namespace Elvanto2Fluro
             } else
             {
                 // it has to be either male or female.  Search in Fluro for data.manualintervention to see who needs to be updated
-                contact.data.manualintervention = true;
+                contact.tags.Add(FluroContentErrorTag);
                 contact.gender = "female";
             }
             contact.dob = person.birthday;
@@ -180,8 +181,8 @@ namespace Elvanto2Fluro
             if (person.email == "" && person.phone == "" && person.mobile == "")
             {
                 // needs to be something - Search in Fluro for data.manualintervention to see who needs to be updated
-                contact.emails.Add("unknown@dev.null");
-                contact.data.manualintervention = true;
+                contact.emails.Add("unknown");
+                
             } else
             {
                 contact.emails.Add(person.email);
