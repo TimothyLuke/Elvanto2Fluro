@@ -22,7 +22,7 @@ namespace Elvanto2Fluro.Fluro
         public string updatedBy { get; set; }
         public object poster { get; set; }
         public object[] tags { get; set; }
-        public Realm[] realms { get; set; }
+        public List<Realm> realms { get; set; }
         public string privacy { get; set; }
         public object[] keywords { get; set; }
         public object[] hashtags { get; set; }

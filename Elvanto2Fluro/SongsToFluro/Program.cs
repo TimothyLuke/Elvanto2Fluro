@@ -40,6 +40,7 @@ namespace Elvanto2Fluro
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
+        private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
 
         private static string FluroVotingMember = "5936300a95402155f8a80346";
         private static string FluroChurchMember = "5936300005bf991296dabfa5";
@@ -316,6 +317,14 @@ namespace Elvanto2Fluro
                     album = song.album,
                     ccli = song.number
                 };
+                if (song.status == "0")
+                {
+                    newsong.status = "archived";
+                }
+                else
+                {
+                    newsong.status = "active";
+                }
 
                 List<Elvanto.File> elvantofiles = new List<Elvanto.File>();
 
@@ -539,10 +548,20 @@ namespace Elvanto2Fluro
             if (m.Success)
             {
                 String videourl = m.Groups[1].ToString();
+                videourl = "https:" + videourl.Replace("\"", "");
+                videourl = "https:" + videourl.Replace("embed/", "watch?v=");
+
                 Fluro.Video video = new Fluro.Video();
                 video.title = "Youtube: " + title;
                 video.external = new External();
-                video.external.youtube = htmltag;
+                video.external.youtube = videourl;
+                video.realms = new List<Realm>();
+                Realm realm = new Realm();
+                realm._id = FluroCreativeRealm;
+                video.realms.Add(realm);
+                video._type = "video";
+                video.assetType = "youtube";
+
 
                 string upjson = JsonConvert.SerializeObject(video);
                 logger.Info(upjson);
@@ -550,8 +569,9 @@ namespace Elvanto2Fluro
                 {
                     upclient.Headers[HttpRequestHeader.ContentType] = "application/json";
                     upclient.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-
-                    string uploadresult = upclient.UploadString(FluroSongURI, "POST", upjson);
+                    logger.Info(upjson);
+                    string uploadresult = upclient.UploadString(FluroVideoURI, "POST", upjson);
+                    
                     resultstring = GetFirstInstance<string>("_id", uploadresult);
 
                 }
