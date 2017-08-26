@@ -225,6 +225,7 @@ namespace Elvanto2Fluro
                     FluroRidgehavenRealm },
                 phoneNumbers = new List<string>(),
                 emails = new List<string>(),
+                tags = new List<string>()
             };
             
             contact._type = "contact";
@@ -266,7 +267,7 @@ namespace Elvanto2Fluro
                 contact.data.volunteer = true;
             }
 
-            contact.tags = new List<string>();
+            
             if (person.category_id == ElvantoMemberCategory)
             {
                 contact.tags.Add(FluroChurchMember);
@@ -286,8 +287,9 @@ namespace Elvanto2Fluro
             if (person.email == "" && person.phone == "" && person.mobile == "")
             {
                 // needs to be something - Search in Fluro for data.manualintervention to see who needs to be updated
-                contact.emails.Add("unknown");
-                
+                contact.emails.Add("unknown@dev.null");
+                contact.tags.Add(FluroContentErrorTag);
+
             } else
             {
                 contact.emails.Add(person.email);
