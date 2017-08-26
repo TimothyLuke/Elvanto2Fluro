@@ -407,7 +407,14 @@ namespace Elvanto2Fluro
 
                 if (file.type == "Video")
                 {
-                    AddVideoToFluro(file.content);
+                    if(file.content.Left(7) == "<iframe")
+                    {
+                        videoids.Add(FindVideoFromIFrame(file.content));
+                    } else
+                    {
+                        videoids.Add(AddVideoToFluro(file.content));
+                    }
+                    
                 }
                 else
                 { 
