@@ -59,8 +59,8 @@ namespace Elvanto2Fluro
             });
 
 
-            MigrateSongs();
-            //MigratePeople();
+            //MigrateSongs();
+            MigratePeople();
 
             Console.ReadLine();
         }
@@ -572,6 +572,9 @@ namespace Elvanto2Fluro
             string resultstring = "";
             videourl = "https:" + videourl.Replace("\"", "");
             videourl = videourl.Replace("embed/", "watch?v=");
+            videourl = videourl.Replace("https:https:", "https:");
+            videourl = videourl.Replace("https:http:", "https:");
+            videourl = videourl.Replace("http:", "https:");
 
             Fluro.Video video = new Fluro.Video();
             video.title = Util.GetYoutubeTitle(videourl);
