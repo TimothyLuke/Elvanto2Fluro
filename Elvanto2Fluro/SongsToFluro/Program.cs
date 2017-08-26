@@ -16,6 +16,7 @@ using System.Net.Http;
 using System.IO;
 using Elvanto2Fluro.Fluro.Family;
 using System.Text.RegularExpressions;
+using Elvanto2Fluro.Elvanto.GroupCollection;
 
 namespace Elvanto2Fluro
 {
@@ -26,6 +27,7 @@ namespace Elvanto2Fluro
         private static string ElvantoAPIKey = "4cwDPuZQO0x91sOz71VOOchajFl7Gg6A ";
         private static string ElvantoSongURI = "https://api.elvanto.com/v1/songs/getAll.json";
         private static string ElvantoSongArrangementURI = "https://api.elvanto.com/v1/songs/arrangements/getAll.json";
+        private static string ElvantoGroupURI = "https://api.elvanto.com/v1/groups/getAll.json";
         private static string ElvantoSongIndividualArangementURI = "https://api.elvanto.com/v1/songs/arrangements/getInfo.json";
         private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getAll.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
@@ -41,12 +43,13 @@ namespace Elvanto2Fluro
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
         private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
+        private static string FluroTeamURI = "https://apiv2.fluro.io/content/group";
+        private static string FluroTeamJoinURI = "https://apiv2.fluro.io/teams/{0}/join";
+        private static string FluroOldMemberIdQuery = "https://apiv2.fluro.io/content/_query/59a135a9e64e6d71468b8bb2?noCache=true&variables[elvantoId]=";
 
         private static string FluroContentErrorTag = "59a136abe64e6d71468b90a0";
         private static string FluroVotingMember = "5936300a95402155f8a80346";
         private static string FluroChurchMember = "5936300005bf991296dabfa5";
-
-    
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
@@ -59,11 +62,111 @@ namespace Elvanto2Fluro
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-
+            //logger.Info("==================================================Starting Songs=================================================");
             //MigrateSongs();
+            //logger.Info("=====================================================End Songs===================================================");
+            logger.Info("=================================================Starting People=================================================");
             MigratePeople();
+            logger.Info("===================================================End People====================================================");
+            logger.Info("=================================================Starting Groups=================================================");
+            MigrateGroups();
+            logger.Info("===================================================End Groups====================================================");
 
             Console.ReadLine();
+        }
+
+        static void MigrateGroups()
+        {
+            // Get Groups
+            using (WebClient client = new WebClient())
+            {
+                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
+                client.UseDefaultCredentials = true;
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                string arrangementresult = client.UploadString(ElvantoSongArrangementURI, "POST", "{\"fields\":[\"people\"]}");
+                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.GroupCollection.GroupRootobject>(arrangementresult);
+                foreach(Elvanto.GroupCollection.Group group in rootArrangement.groups.group)
+                {
+                    AddGroupToFluro(group);
+                }
+            }
+        }
+
+        private static void AddGroupToFluro(Elvanto.GroupCollection.Group group)
+        {
+            Team team = new Team();
+            team.title = group.name;
+            team.allowProvisional = true;
+            team.data = new TeamData();
+            team.data.importId = group.id;
+            team.data.meeting_address = group.meeting_address;
+            team.data.meeting_city = group.meeting_city;
+            team.data.meeting_country = group.meeting_country;
+            team.data.meeting_day = group.meeting_day;
+            team.data.meeting_frequency = group.meeting_frequency;
+            team.data.meeting_postcode = group.meeting_postcode;
+            team.data.meeting_state = group.meeting_state;
+            team.data.meeting_time = group.meeting_time;
+            team.realms = new List<Realm>();
+            Realm realm = new Realm();
+            realm._id = FluroRidgehavenRealm;
+            team.realms.Add(realm);
+
+            string teamId = PerformFluroTeamUpload(team);
+            List<Elvanto.People.Person> people = JsonConvert.DeserializeObject<List<Elvanto.People.Person>>(group.people.ToString());
+            foreach(var person in people)
+            {
+                AddPersonToFluroGroup(person.id, teamId);
+            }
+
+        }
+
+        private static void AddPersonToFluroGroup(string id, string teamId)
+        {
+            WebClient client = new WebClient
+            {
+                UseDefaultCredentials = true,
+
+            };
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+            
+            string stringFullOfJson = client.DownloadString(FluroOldMemberIdQuery + id);
+            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
+
+            PerformFluroTeamJoin(returnId, teamId);
+        }
+
+        private static void PerformFluroTeamJoin(string id, string teamId)
+        {
+            WebClient client = new WebClient
+            {
+                UseDefaultCredentials = true,
+
+            };
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+            string jsontoupload = $"{{ \"_id\":\"{id}\"}}";
+
+            logger.Debug(jsontoupload);
+            string stringFullOfJson = client.UploadString(String.Format(FluroTeamJoinURI, teamId), jsontoupload);
+        }
+
+        private static string PerformFluroTeamUpload(Team team)
+        {
+            WebClient client = new WebClient
+            {
+                UseDefaultCredentials = true,
+                
+            };
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+            string jsontoupload = JsonConvert.SerializeObject(team);
+            logger.Debug(jsontoupload);
+            string stringFullOfJson = client.UploadString(FluroTeamURI, jsontoupload);
+
+            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
+            return returnId;
         }
 
         static void MigratePeople()
@@ -175,6 +278,8 @@ namespace Elvanto2Fluro
                     contact.tags.Add(FluroVotingMember);
                 }
             }
+            contact.maritalStatus = person.marital_status;
+            contact.householdRole = person.family_relationship;
             contact.data.photoURL = person.picture;
             contact.phoneNumbers.Add(person.mobile);
             contact.phoneNumbers.Add(person.phone);

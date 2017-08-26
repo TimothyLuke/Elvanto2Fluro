@@ -28,6 +28,7 @@ namespace Elvanto2Fluro.Fluro.Family
         public string family { get; set; }
         public List<string> phoneNumbers { get; set; }
         public List<string> emails { get; set; }
+        public string maritalStatus { get; set; }
     }
 
     public class Address

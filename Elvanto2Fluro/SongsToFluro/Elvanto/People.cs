@@ -44,7 +44,8 @@ namespace Elvanto2Fluro.Elvanto.People
         public string marital_status { get; set; }
         [JsonProperty("custom_95d1c84c-6196-11e5-9d36-06ba798128be")]
         public VotingConstruct votingMember { get; set; }
-}
+        public string Leader { get; set; }
+    }
 
     public class VotingConstruct
     {
