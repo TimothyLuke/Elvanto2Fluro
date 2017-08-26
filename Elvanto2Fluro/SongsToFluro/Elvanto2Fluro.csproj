@@ -61,6 +61,7 @@
     <Compile Include="Elvanto\People.cs" />
     <Compile Include="Fluro\FluroFile.cs" />
     <Compile Include="Fluro\FoundSheetMusic.cs" />
+    <Compile Include="Fluro\Video.cs" />
     <Compile Include="FormUpload.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Program.cs" />

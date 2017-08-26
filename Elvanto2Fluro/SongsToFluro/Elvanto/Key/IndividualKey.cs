@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SongsToFluro.Elvanto.IndividualKey
+namespace Elvanto2Fluro.Elvanto.IndividualKey
 {
 
 

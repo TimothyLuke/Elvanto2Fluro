@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace SongsToFluro.Fluro
+namespace Elvanto2Fluro.Fluro
 {
-    public class External
-    {
-    }
+
 
     public class SheetMusic
     {
@@ -28,7 +26,7 @@ namespace SongsToFluro.Fluro
 
     public class Data
     {
-        public External external { get; set; }
+        public object external { get; set; }
         public List<object> videos { get; set; }
         public List<SheetMusic> sheetMusic { get; set; }
         public List<object> lyrics { get; set; }

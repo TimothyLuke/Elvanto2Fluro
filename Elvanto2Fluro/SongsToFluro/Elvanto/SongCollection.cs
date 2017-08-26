@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace SongsToFluro.Elvanto
+namespace Elvanto2Fluro.Elvanto
 {
     public class Location
     {
@@ -17,7 +17,7 @@ namespace SongsToFluro.Elvanto
     public class Song
     {
         public string id { get; set; }
-        public int status { get; set; }
+        public string status { get; set; }
         public string date_added { get; set; }
         public string date_modified { get; set; }
         public string title { get; set; }
@@ -31,6 +31,7 @@ namespace SongsToFluro.Elvanto
         public string notes { get; set; }
         public object categories { get; set; }
         public Locations locations { get; set; }
+        public object files { get; set; }
     }
 
     public class Songs
@@ -47,5 +48,25 @@ namespace SongsToFluro.Elvanto
         public string generated_in { get; set; }
         public string status { get; set; }
         public Songs songs { get; set; }
+    }
+
+    public class SongWithFiles
+    {
+        public string id { get; set; }
+        public string status { get; set; }
+        public string date_added { get; set; }
+        public string date_modified { get; set; }
+        public string title { get; set; }
+        public string permalink { get; set; }
+        public string number { get; set; }
+        public int item { get; set; }
+        public int learn { get; set; }
+        public int allow_downloads { get; set; }
+        public string artist { get; set; }
+        public string album { get; set; }
+        public string notes { get; set; }
+        public object categories { get; set; }
+        public Locations locations { get; set; }
+        public Files files { get; set; }
     }
 }

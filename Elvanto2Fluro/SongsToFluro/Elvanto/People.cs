@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SongsToFluro.Elvanto.People
+namespace Elvanto2Fluro.Elvanto.People
 {
     public class Person
     {

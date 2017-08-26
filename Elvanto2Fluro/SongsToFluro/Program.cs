@@ -9,14 +9,15 @@ using System.Net;
 
 using System.Text;
 using System.Threading.Tasks;
-using SongsToFluro.Elvanto;
+using Elvanto2Fluro.Elvanto;
 using System.Threading;
-using SongsToFluro.Fluro;
+using Elvanto2Fluro.Fluro;
 using System.Net.Http;
 using System.IO;
-using SongsToFluro.Fluro.Family;
+using Elvanto2Fluro.Fluro.Family;
+using System.Text.RegularExpressions;
 
-namespace SongsToFluro
+namespace Elvanto2Fluro
 {
     class Program
     {
@@ -57,8 +58,8 @@ namespace SongsToFluro
             });
 
 
-            //MigrateSongs();
-            MigratePeople();
+            MigrateSongs();
+            //MigratePeople();
 
             Console.ReadLine();
         }
@@ -132,7 +133,8 @@ namespace SongsToFluro
                 contact.gender = person.gender;
             } else
             {
-                // it has to be either male or female
+                // it has to be either male or female.  Search in Fluro for data.manualintervention to see who needs to be updated
+                contact.data.manualintervention = true;
                 contact.gender = "female";
             }
             contact.dob = person.birthday;
@@ -176,8 +178,9 @@ namespace SongsToFluro
             contact.phoneNumbers.Add(person.phone);
             if (person.email == "" && person.phone == "" && person.mobile == "")
             {
-                // needs to be something
+                // needs to be something - Search in Fluro for data.manualintervention to see who needs to be updated
                 contact.emails.Add("unknown@dev.null");
+                contact.data.manualintervention = true;
             } else
             {
                 contact.emails.Add(person.email);
@@ -278,8 +281,10 @@ namespace SongsToFluro
             {
                 UseDefaultCredentials = true,
                 Credentials = new NetworkCredential(ElvantoAPIKey, "")
+                
             };
-            string stringFullOfJson = client.DownloadString(ElvantoSongURI);
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            string stringFullOfJson = client.UploadString(ElvantoSongURI, "{\"files\": true}");
 
             Fluro.Realm realm = new Fluro.Realm
             {
@@ -313,6 +318,19 @@ namespace SongsToFluro
                 };
 
                 List<Elvanto.File> elvantofiles = new List<Elvanto.File>();
+
+                string filesstring = song.files.ToString();
+
+                if (filesstring.Length >= 3)
+                {
+                    List<Elvanto.File> files = GetFirstInstance<List<Elvanto.File>>("file", filesstring);
+                    foreach (Elvanto.File file in files)
+                    {
+                        elvantofiles.Add(file);
+                    }
+                }    
+                
+                
 
                 Thread.Sleep(2000);
                 using (WebClient newclient = new WebClient())
@@ -372,6 +390,7 @@ namespace SongsToFluro
         private static void AddSongToFluro(Fluro.RootObject newsong, List<Elvanto.File> files)
         {
             List<string> chordchartids = new List<string>();
+            List<string> videoids = new List<string>();
             // add files 
             // first search to see if it already exists
             foreach (Elvanto.File file in files) {
@@ -388,8 +407,8 @@ namespace SongsToFluro
                         //found
                         try
                         {
-                            var foundobjects = JsonConvert.DeserializeObject<SongsToFluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
-                            foreach (SongsToFluro.Fluro.SheetMusicSearch.Class1 sheet in foundobjects.Property1)
+                            var foundobjects = JsonConvert.DeserializeObject<Elvanto2Fluro.Fluro.SheetMusicSearch.Rootobject>(searchresult);
+                            foreach (Elvanto2Fluro.Fluro.SheetMusicSearch.Class1 sheet in foundobjects.Property1)
                             {
                                 chordchartids.Add(sheet._id);
                             }
@@ -405,43 +424,48 @@ namespace SongsToFluro
                         HttpClient dlclient = new HttpClient();
                         
                         HttpResponseMessage response = new HttpResponseMessage();
-
-                        response = dlclient.GetAsync(file.content).Result;
-                        if (response.IsSuccessStatusCode)
+                        if (file.content.Left(7) == "<iframe")
                         {
-                            //response.Content.ReadAsStringAsync().Result.Replace("\"", string.Empty);
-                            //mybytearray = Convert.FromBase64String(result);
-                            byte[] downloadedfile = response.Content.ReadAsByteArrayAsync().Result;
-                            string filetype = "";
-                            filetype = response.Content.Headers.ContentType.ToString();
+                            videoids.Add(AddVideoToFluro(file.content, newsong.title));
+                        }
+                        else
+                        {
+                            response = dlclient.GetAsync(file.content).Result;
+                            if (response.IsSuccessStatusCode)
+                            {
+                                //response.Content.ReadAsStringAsync().Result.Replace("\"", string.Empty);
+                                //mybytearray = Convert.FromBase64String(result);
+                                byte[] downloadedfile = response.Content.ReadAsByteArrayAsync().Result;
+                                string filetype = "";
+                                filetype = response.Content.Headers.ContentType.ToString();
                             
 
 
-                            Dictionary<string, object> postParameters = new Dictionary<string, object>();
-                            SheetMusic sheet = new SheetMusic
-                            {
-                                title = file.title.Replace("/", " "),
-                                realms = new List<string>()
-                            };
-                            sheet.realms.Add(FluroCreativeRealm);
-                            sheet.definition = "sheetMusic";
-                            string jsonsheet = JsonConvert.SerializeObject(sheet);
+                                Dictionary<string, object> postParameters = new Dictionary<string, object>();
+                                SheetMusic sheet = new SheetMusic
+                                {
+                                    title = file.title.Replace("/", " "),
+                                    realms = new List<string>()
+                                };
+                                sheet.realms.Add(FluroCreativeRealm);
+                                sheet.definition = "sheetMusic";
+                                string jsonsheet = JsonConvert.SerializeObject(sheet);
 
-                            postParameters.Add("json", jsonsheet);
-                            postParameters.Add("?returnPopulated", true);
-                            postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
-                            string userAgent = "Timothy's C# Migrator";
-                            HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroFileUploadURI, userAgent, postParameters, FluroAPIKey);
+                                postParameters.Add("json", jsonsheet);
+                                postParameters.Add("?returnPopulated", true);
+                                postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
+                                string userAgent = "Timothy's C# Migrator";
+                                HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroFileUploadURI, userAgent, postParameters, FluroAPIKey);
 
-                            StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
-                            string fullResponse = responseReader.ReadToEnd();
-                            logger.Debug(fullResponse);
-                            webResponse.Close();
-                            //need to parse the result and add it to the array
-                            Fluro.File.RootObject returnedfile = JsonConvert.DeserializeObject<Fluro.File.RootObject>(fullResponse);
-                            chordchartids.Add(returnedfile._id);
+                                StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
+                                string fullResponse = responseReader.ReadToEnd();
+                                logger.Debug(fullResponse);
+                                webResponse.Close();
+                                //need to parse the result and add it to the array
+                                Fluro.File.RootObject returnedfile = JsonConvert.DeserializeObject<Fluro.File.RootObject>(fullResponse);
+                                chordchartids.Add(returnedfile._id);
+                            }
                         }
-
                     }
                 }
             }
@@ -455,6 +479,11 @@ namespace SongsToFluro
                     _id = sheetid
                 };
                 newsong.data.sheetMusic.Add(sheet);
+            }
+            newsong.data.videos = new List<object>();
+            foreach (string videoid in videoids)
+            {
+                newsong.data.videos.Add(videoid);
             }
 
             //now check for the Song
@@ -493,7 +522,45 @@ namespace SongsToFluro
 
         }
 
+        private static string AddVideoToFluro(string htmltag, string title)
+        {
 
+            string resultstring = "";
+            // This is an iframe
+            string re1 = ".*?"; // Non-greedy match on filler
+            string re2 = "\".*?\""; // Uninteresting: string
+            string re3 = ".*?"; // Non-greedy match on filler
+            string re4 = "\".*?\""; // Uninteresting: string
+            string re5 = ".*?"; // Non-greedy match on filler
+            string re6 = "(\".*?\")";   // Double Quote String 1
+
+            Regex r = new Regex(re1 + re2 + re3 + re4 + re5 + re6, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            Match m = r.Match(htmltag);
+            if (m.Success)
+            {
+                String videourl = m.Groups[1].ToString();
+                Fluro.Video video = new Fluro.Video();
+                video.title = "Youtube: " + title;
+                video.external = new External();
+                video.external.youtube = htmltag;
+
+                string upjson = JsonConvert.SerializeObject(video);
+                logger.Info(upjson);
+                using (WebClient upclient = new WebClient())
+                {
+                    upclient.Headers[HttpRequestHeader.ContentType] = "application/json";
+                    upclient.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+
+                    string uploadresult = upclient.UploadString(FluroSongURI, "POST", upjson);
+                    resultstring = GetFirstInstance<string>("_id", uploadresult);
+
+                }
+            }
+            
+
+            return resultstring;
+
+        }
 
         private static void ProcessIndividualArrangementFiles(string id, List<Elvanto.File> files)
         {

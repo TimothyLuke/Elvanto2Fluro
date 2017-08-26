@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SongsToFluro.Fluro.Family
+namespace Elvanto2Fluro.Fluro.Family
 {
 
 
@@ -76,6 +76,7 @@ namespace SongsToFluro.Fluro.Family
         public string preferredname { get; set; }
         public bool volunteer { get; set; }
         public string photoURL { get; set; }
+        public bool manualintervention { get; set; }
     }
 
     
