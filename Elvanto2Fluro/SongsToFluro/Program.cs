@@ -62,12 +62,12 @@ namespace Elvanto2Fluro
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            logger.Info("==================================================Starting Songs=================================================");
-            MigrateSongs();
-            logger.Info("=====================================================End Songs===================================================");
-            logger.Info("=================================================Starting People=================================================");
-            MigratePeople();
-            logger.Info("===================================================End People====================================================");
+            //logger.Info("==================================================Starting Songs=================================================");
+            //MigrateSongs();
+            //logger.Info("=====================================================End Songs===================================================");
+            //logger.Info("=================================================Starting People=================================================");
+            //MigratePeople();
+            //logger.Info("===================================================End People====================================================");
             logger.Info("=================================================Starting Groups=================================================");
             MigrateGroups();
             logger.Info("===================================================End Groups====================================================");
@@ -124,6 +124,32 @@ namespace Elvanto2Fluro
                 }
             }
 
+            if (group.status != "Active") {
+
+                PerformFluroTeamArchive(teamId);
+            }
+
+        }
+
+        private static void PerformFluroTeamArchive(string id)
+        {
+            if (id != null)
+            {
+
+
+                WebClient client = new WebClient
+                {
+                    UseDefaultCredentials = true,
+
+                };
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
+                
+                string jsontoupload = $"{{ \"status\":\"archived\"}}";
+
+                logger.Debug(jsontoupload);
+                string stringFullOfJson = client.UploadString(FluroTeamURI + "/" + id, "PUT", jsontoupload);
+            }
         }
 
         private static void AddPersonToFluroGroup(string id, string teamId)
