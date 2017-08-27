@@ -65,9 +65,9 @@ namespace Elvanto2Fluro
             //logger.Info("==================================================Starting Songs=================================================");
             //MigrateSongs();
             //logger.Info("=====================================================End Songs===================================================");
-            //logger.Info("=================================================Starting People=================================================");
-            //MigratePeople();
-            //logger.Info("===================================================End People====================================================");
+            logger.Info("=================================================Starting People=================================================");
+            MigratePeople();
+            logger.Info("===================================================End People====================================================");
             logger.Info("=================================================Starting Groups=================================================");
             MigrateGroups();
             logger.Info("===================================================End Groups====================================================");
@@ -277,7 +277,7 @@ namespace Elvanto2Fluro
             {
                 // it has to be either male or female.  Search in Fluro for data.manualintervention to see who needs to be updated
                 contact.tags.Add(FluroContentErrorTag);
-                contact.gender = "female";
+                contact.gender = "unknown";
             }
             contact.dob = person.birthday;
             contact._type = "contact";
