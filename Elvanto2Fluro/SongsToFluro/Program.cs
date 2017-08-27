@@ -381,7 +381,15 @@ namespace Elvanto2Fluro
             newfamily.phoneNumbers.Add(person.mobile);
             newfamily.phoneNumbers.Add(person.phone);
 
-
+            if (person.archived > 0)
+            {
+                newfamily.status = "archived";
+            }
+            else
+            {
+                newfamily.status = "active";
+            }
+            
 
 
 
