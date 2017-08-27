@@ -50,6 +50,7 @@ namespace Elvanto2Fluro
         private static string FluroContentErrorTag = "59a136abe64e6d71468b90a0";
         private static string FluroVotingMember = "5936300a95402155f8a80346";
         private static string FluroChurchMember = "5936300005bf991296dabfa5";
+        private static string FluroNewPeople = "5923a8be2b5ab52ecd519126";
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
@@ -307,7 +308,11 @@ namespace Elvanto2Fluro
             if (person.category_id == ElvantoMemberCategory)
             {
                 contact.tags.Add(FluroChurchMember);
+            } else
+            {
+                contact.tags.Add(FluroNewPeople);
             }
+
             if (person.votingMember != null)
             {
                 if (person.votingMember.name == "Yes")
