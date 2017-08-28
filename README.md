@@ -1,21 +1,25 @@
 # Elvanto2Fluro
 
-This was created as a way of extracting data from Elvanto's API to push to Fluro via its API.  Its designed to be run from Visual Studio as a Console Application.  Visual Studio Community is a free download from Microsoft.
+is an ETL Process for migrating from Elvanto to Fluro  Its designed to be run from Visual Studio as a Console Application.  Visual Studio Community is a free download from Microsoft.
 
 Thyis project also assumes you are familiar with: 
  - https://www.elvanto.com/api
  - https://developers.fluro.io/
+ - https://console.developers.google.com/apis/dashboard
  - Newtonsoft JSON.Net
  - NLog
  - GitHub Plugin for Visual Studio
 
 To use this in another setting you will need to:
 
-1/ Obtain your Elvanto API key and replace the static variable ElvantoAPIKey
-2/ Obtain your Fluro API Key and replace the static variable FluroAPIKey
-3/ Obtain the realm keys you wish to use.  I have defined:
+1. Obtain your Elvanto API key and replace the static variable Util.ElvantoAPIKey
+2. Obtain your Fluro API Key and replace the static variable Util.FluroAPIKey
+3. Obtain your Youtube API key and replace the static variable Util.YoutubeAPIKey
+4. Obtain the realm keys you wish to use.  I have defined:
    -  FluroCreativeRealm -- This is the realm used for my creative team for songs and uploads
    -  FluroRidgehavenRealm -- This is the realm that most people go into as a campus.
+5. Update the Fluro Tag IDs you wish to use.
+6. Update the Elvanto Category IDs
    
 ## Main Methods
 ### MigrateSongs();
@@ -32,7 +36,6 @@ This picks up all the Elvanto groups and adds them to FLuro.  It then iterates t
 Instead of using Console.Writeline this uses the NLog library (https://github.com/NLog/NLog/wiki/Tutorial).  You can use this to log to both screen and file in case you want to more fine tune the console output.
 
 ## Getting Started
-Within Visual Studio check out the project from GitHub.  ALl the heavy lifting is within Program.cs
+Within Visual Studio check out the project from GitHub.  All the heavy lifting is within Program.cs
 
-## Why all the RootObject and Names spaces
-Cause I am a nub with JSON.Net and was working to get it to work first.
+
