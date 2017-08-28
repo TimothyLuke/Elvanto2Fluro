@@ -62,7 +62,7 @@ namespace Elvanto2Fluro.Elvanto.People
         public List<Person> person { get; set; }
     }
 
-    public class RootObject
+    public class ELvantoPeopleRootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }

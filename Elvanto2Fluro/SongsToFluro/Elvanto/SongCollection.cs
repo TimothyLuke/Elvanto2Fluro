@@ -43,7 +43,7 @@ namespace Elvanto2Fluro.Elvanto
         public List<Song> song { get; set; }
     }
 
-    public class RootObject
+    public class SongRootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }

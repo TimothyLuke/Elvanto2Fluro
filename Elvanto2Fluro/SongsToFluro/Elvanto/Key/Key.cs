@@ -27,7 +27,7 @@ namespace Elvanto2Fluro.Elvanto.Key
         public List<Key> key { get; set; }
     }
 
-    public class RootObject
+    public class KeyRootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }

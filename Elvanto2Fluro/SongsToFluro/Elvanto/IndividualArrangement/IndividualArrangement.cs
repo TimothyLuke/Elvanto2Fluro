@@ -28,7 +28,7 @@ namespace Elvanto2Fluro.Elvanto.IndividualArrangement
     }
 
 
-    public class RootObject
+    public class IndividualArrangementRootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }

@@ -24,7 +24,7 @@ namespace Elvanto2Fluro
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        private static string ElvantoAPIKey = "4cwDPuZQO0x91sOz71VOOchajFl7Gg6A ";
+        
         private static string ElvantoSongURI = "https://api.elvanto.com/v1/songs/getAll.json";
         private static string ElvantoSongArrangementURI = "https://api.elvanto.com/v1/songs/arrangements/getAll.json";
         private static string ElvantoGroupURI = "https://api.elvanto.com/v1/groups/getAll.json";
@@ -33,10 +33,8 @@ namespace Elvanto2Fluro
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
         private static string ElvantoPeopleURI = "https://api.elvanto.com/v1/people/getAll.json";
         private static string ElvantoMemberCategory = "a9802b8c-2e1b-11e2-9039-ef9e4c9f3a46";
-        
 
 
-        private static string FluroAPIKey = "$2a$10$jjHToxeGm1v.OdbxHy.NqOGm.wKfvaueG0g7pInRsGYy8DWNNutcO";
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
@@ -78,42 +76,44 @@ namespace Elvanto2Fluro
 
         static void MigrateGroups()
         {
-            // Get Groups
-            using (WebClient client = new WebClient())
+
+            string arrangementresult = Util.UploadToElvantoReturnJson(ElvantoGroupURI, "POST", "{\"fields\":[\"people\"]}");
+            GroupRootobject rootArrangement = JsonConvert.DeserializeObject<GroupRootobject>(arrangementresult);
+            foreach (Elvanto.GroupCollection.Group group in rootArrangement.groups.group)
             {
-                client.UseDefaultCredentials = true;
-                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                string arrangementresult = client.UploadString(ElvantoGroupURI, "POST", "{\"fields\":[\"people\"]}");
-                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.GroupCollection.GroupRootobject>(arrangementresult);
-                foreach(Elvanto.GroupCollection.Group group in rootArrangement.groups.group)
-                {
-                    AddGroupToFluro(group);
-                }
+                AddGroupToFluro(group);
             }
+
         }
 
         private static void AddGroupToFluro(Elvanto.GroupCollection.Group group)
         {
-            Team team = new Team();
-            team.title = group.name;
-            team.allowProvisional = true;
-            team.data = new TeamData();
-            team.data.importId = group.id;
-            team.data.meeting_address = group.meeting_address;
-            team.data.meeting_city = group.meeting_city;
-            team.data.meeting_country = group.meeting_country;
-            team.data.meeting_day = group.meeting_day;
-            team.data.meeting_frequency = group.meeting_frequency;
-            team.data.meeting_postcode = group.meeting_postcode;
-            team.data.meeting_state = group.meeting_state;
-            team.data.meeting_time = group.meeting_time;
+            Team team = new Team
+            {
+                title = group.name,
+                allowProvisional = true,
+                data = new TeamData
+                {
+                    importId = group.id,
+                    meeting_address = group.meeting_address,
+                    meeting_city = group.meeting_city,
+                    meeting_country = group.meeting_country,
+                    meeting_day = group.meeting_day,
+                    meeting_frequency = group.meeting_frequency,
+                    meeting_postcode = group.meeting_postcode,
+                    meeting_state = group.meeting_state,
+                    meeting_time = group.meeting_time,
+                }
+            };
             team.realms = new List<Realm>();
-            Realm realm = new Realm();
-            realm._id = FluroRidgehavenRealm;
+            Realm realm = new Realm
+            {
+                _id = FluroRidgehavenRealm
+            };
             team.realms.Add(realm);
 
-            string teamId = PerformFluroTeamUpload(team);
+            string teamId = Util.UploadToFluroReturnId(FluroTeamURI, "POST", JsonConvert.SerializeObject(team));
+
             string peoplestring = group.people.ToString();
             logger.Debug(peoplestring);
             if (peoplestring.Length > 2)
@@ -125,119 +125,59 @@ namespace Elvanto2Fluro
                 }
             }
 
-            if (group.status != "Active") {
-
-                PerformFluroTeamArchive(teamId);
-            }
-
-        }
-
-        private static void PerformFluroTeamArchive(string id)
-        {
-            if (id != null)
+            if (group.status != "Active")
             {
 
-
-                WebClient client = new WebClient
+                if (teamId != null)
                 {
-                    UseDefaultCredentials = true,
+                    string jsontoupload = $"{{ \"status\":\"archived\"}}";
+                    string stringFullOfJson = Util.UploadToFluroReturnJson(FluroTeamURI + "/" + teamId, "PUT", jsontoupload);
+                }
 
-                };
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                
-                string jsontoupload = $"{{ \"status\":\"archived\"}}";
-
-                logger.Debug(jsontoupload);
-                string stringFullOfJson = client.UploadString(FluroTeamURI + "/" + id, "PUT", jsontoupload);
             }
+
         }
+
 
         private static void AddPersonToFluroGroup(string id, string teamId)
         {
-            WebClient client = new WebClient
-            {
-                UseDefaultCredentials = true,
 
-            };
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-            
-            string stringFullOfJson = client.DownloadString(FluroOldMemberIdQuery + id);
-            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
 
-            PerformFluroTeamJoin(returnId, teamId);
+            string returnId = Util.UploadToFluroReturnId(FluroOldMemberIdQuery + id, "GET", "");
+
+            string jsontoupload = $"{{ \"_id\":\"{returnId}\"}}";
+
+            Util.UploadToFluroReturnJson(String.Format(FluroTeamJoinURI, teamId), "POST", jsontoupload);
         }
 
-        private static void PerformFluroTeamJoin(string id, string teamId)
-        {
-            if (id != null)
-            {
 
-
-                WebClient client = new WebClient
-                {
-                    UseDefaultCredentials = true,
-
-                };
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                string jsontoupload = $"{{ \"_id\":\"{id}\"}}";
-
-                logger.Debug(jsontoupload);
-                string stringFullOfJson = client.UploadString(String.Format(FluroTeamJoinURI, teamId), jsontoupload);
-            }
-        }
-
-        private static string PerformFluroTeamUpload(Team team)
-        {
-            WebClient client = new WebClient
-            {
-                UseDefaultCredentials = true,
-                
-            };
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-            string jsontoupload = JsonConvert.SerializeObject(team);
-            logger.Debug(jsontoupload);
-            string stringFullOfJson = client.UploadString(FluroTeamURI, jsontoupload);
-
-            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
-            return returnId;
-        }
 
         static void MigratePeople()
         {
-            WebClient client = new WebClient
-            {
-                UseDefaultCredentials = true,
-                Credentials = new NetworkCredential(ElvantoAPIKey, "")
-            };
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            string stringFullOfJson = client.UploadString(ElvantoPeopleURI, "{\"fields\": [\"gender\", \"birthday\", \"marital_status\", \"home_address\", \"home_address2\", \"home_city\", \"home_state\", \"home_postcode\", \"departments\", \"custom_95d1c84c-6196-11e5-9d36-06ba798128be\"] }");
+            string stringFullOfJson = Util.UploadToElvantoReturnJson(ElvantoPeopleURI, "POST", "{\"fields\": [\"gender\", \"birthday\", \"marital_status\", \"home_address\", \"home_address2\", \"home_city\", \"home_state\", \"home_postcode\", \"departments\", \"custom_95d1c84c-6196-11e5-9d36-06ba798128be\"] }");
 
-            
-            var rootobj = JsonConvert.DeserializeObject<Elvanto.People.RootObject>(stringFullOfJson);
+            var rootobj = JsonConvert.DeserializeObject<Elvanto.People.ELvantoPeopleRootObject>(stringFullOfJson);
             var groupedFamilyList = rootobj.people.person
                 .GroupBy(u => u.family_id)
                 .Select(grp => grp.ToList())
                 .ToList();
 
-            
+
             foreach (var family in groupedFamilyList)
             {
 
                 string familyId = "";
                 if (family.First().family_id == "")
                 {
-                    logger.Info("Group None - {0}",  family.First().lastname);
-                    
+                    logger.Info("Group None - {0}", family.First().lastname);
+
                     familyId = "";
                 }
                 else
                 {
                     logger.Info("Group {0} - {1}", family.First().family_id, family.First().lastname);
-                    if (familyId == "") {
+                    if (familyId == "")
+                    {
                         familyId = AddFamilyToFluro(family.First());
                     }
                 }
@@ -248,7 +188,7 @@ namespace Elvanto2Fluro
 
                 }
 
-                
+
             }
         }
 
@@ -264,7 +204,7 @@ namespace Elvanto2Fluro
                 emails = new List<string>(),
                 tags = new List<string>()
             };
-            
+
             contact._type = "contact";
 
             contact.data.channel = "TimothyLuke Elvanto2Fluro";
@@ -272,9 +212,11 @@ namespace Elvanto2Fluro
             contact.title = person.firstname.ToLower() + " " + person.lastname.ToLower();
             contact.lastName = person.lastname.ToLower();
             contact.firstName = person.firstname.ToLower();
-            if (person.gender != "" ) {
+            if (person.gender != "")
+            {
                 contact.gender = person.gender;
-            } else
+            }
+            else
             {
                 // it has to be either male or female.  Search in Fluro for data.manualintervention to see who needs to be updated
                 contact.tags.Add(FluroContentErrorTag);
@@ -297,18 +239,19 @@ namespace Elvanto2Fluro
             if (person.deceased > 0)
             {
                 contact.status = "deceased";
-                
+
             }
             if (person.volunteer > 0)
             {
                 contact.data.volunteer = true;
             }
 
-            
+
             if (person.category_id == ElvantoMemberCategory)
             {
                 contact.tags.Add(FluroChurchMember);
-            } else
+            }
+            else
             {
                 contact.tags.Add(FluroNewPeople);
             }
@@ -331,13 +274,14 @@ namespace Elvanto2Fluro
                 contact.emails.Add("unknown@dev.null");
                 contact.tags.Add(FluroContentErrorTag);
 
-            } else
+            }
+            else
             {
                 contact.emails.Add(person.email);
             }
-            
+
             contact.data.preferredname = person.preferred_name;
-            PerformFluroPersonUpload(contact);
+            Util.UploadToFluroReturnJson(FluroContactURI, "POST", JsonConvert.SerializeObject(contact));
         }
 
         static string AddFamilyToFluro(Elvanto.People.Person person)
@@ -356,27 +300,23 @@ namespace Elvanto2Fluro
                 realms = new List<Realm>()
             };
             newfamily.realms.Add(realm);
-            
 
-            
 
-            if (newfamily.title == null )
+
+
+            if (newfamily.title == null)
             {
                 newfamily.title = person.lastname;
             }
-            //newfamily.firstLine = newfamily.firstLine + ", " + person.firstname;
-            //if (newfamily.firstLine.Left(2) == ", ")
-            //{
-            //    newfamily.firstLine = newfamily.firstLine.Substring(2);
-            //}
+
             newfamily.emails.Add(person.email);
-            if(newfamily.address.addressLine1 == null)
+            if (newfamily.address.addressLine1 == null)
             {
                 newfamily.address.addressLine1 = person.home_address;
                 newfamily.address.addressLine2 = person.home_address2;
                 newfamily.address.suburb = person.home_city;
                 newfamily.address.state = person.home_state;
-                if (person.home_postcode != "" )
+                if (person.home_postcode != "")
                 {
                     newfamily.address.postalCode = Convert.ToInt32(person.home_postcode);
                 }
@@ -394,55 +334,17 @@ namespace Elvanto2Fluro
             {
                 newfamily.status = "active";
             }
-            
 
 
-
-            return PerformFluroFamilyUpload(newfamily);
+            return Util.UploadToFluroReturnId(FluroFamilyURI, "POST", JsonConvert.SerializeObject(newfamily));
         }
 
-        private static string  PerformFluroFamilyUpload(Fluro.Family.RootObject family)
-        {
-            WebClient client = new WebClient();
-            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-            client.UseDefaultCredentials = true;
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            string preuploadJson = JsonConvert.SerializeObject(family);
-            logger.Info(preuploadJson);
-            string stringFullOfJson = client.UploadString(FluroFamilyURI, preuploadJson);
-
-            string returnId = GetFirstInstance<string>("_id", stringFullOfJson);
-            return returnId;
-        }
-
-        private static void PerformFluroPersonUpload(Fluro.Family.Contact contact)
-        {
-            WebClient client = new WebClient();
-            client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-            client.UseDefaultCredentials = true;
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            string preuploadJson = JsonConvert.SerializeObject(contact);
-            logger.Info(preuploadJson);
-            string stringFullOfJson = client.UploadString(FluroContactURI, preuploadJson);
-
-
-            
-
-        }
 
         static void MigrateSongs()
         {
 
 
-
-            WebClient client = new WebClient
-            {
-                UseDefaultCredentials = true,
-                Credentials = new NetworkCredential(ElvantoAPIKey, "")
-                
-            };
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            string stringFullOfJson = client.UploadString(ElvantoSongURI, "{\"files\": true}");
+            string stringFullOfJson = Util.UploadToElvantoReturnJson(ElvantoSongURI, "POST", "{\"files\": true}");
 
             Fluro.Realm realm = new Fluro.Realm
             {
@@ -452,18 +354,14 @@ namespace Elvanto2Fluro
 
 
 
-            var rootobj = JsonConvert.DeserializeObject<Elvanto.RootObject>(stringFullOfJson);
+            SongRootObject rootobj = JsonConvert.DeserializeObject<SongRootObject>(stringFullOfJson);
 
-            
 
-            foreach (Song song in rootobj.songs.song) {
+            foreach (Song song in rootobj.songs.song)
+            {
                 logger.Info($"{song.id} {song.title}");
                 Fluro.RootObject newsong = new Fluro.RootObject
                 {
-
-                    //behold id ad17eee6-3544-11e7-ba01-061a3b9c64af
-
-
                     title = song.title,
                     realms = new List<Fluro.Realm>()
                 };
@@ -489,61 +387,30 @@ namespace Elvanto2Fluro
 
                 if (filesstring.Length >= 3)
                 {
-                    List<Elvanto.File> files = GetFirstInstance<List<Elvanto.File>>("file", filesstring);
+                    List<Elvanto.File> files = Util.GetFirstInstance<List<Elvanto.File>>("file", filesstring);
                     foreach (Elvanto.File file in files)
                     {
                         elvantofiles.Add(file);
                     }
-                }    
-                
-                
+                }
 
-                Thread.Sleep(2000);
-                using (WebClient newclient = new WebClient())
+
+
+                string arrangementresult = Util.UploadToElvantoReturnJson(ElvantoSongArrangementURI, "POST", "{\"song_id\": \"" + song.id + "\",    \"files\": true}");
+
+                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.Arrangement.ArrangementRootObject>(arrangementresult);
+                newsong.data.lyrics = new List<object>();
+                foreach(Elvanto.Arrangement.Arrangement arrangement in rootArrangement.arrangements.arrangement)
                 {
-                    newclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                    newclient.UseDefaultCredentials = true;
-                    client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                    string arrangementresult = client.UploadString(ElvantoSongArrangementURI, "POST", "{\"song_id\": \"" + song.id + "\",    \"files\": true}");
-                    var rootArrangement = JsonConvert.DeserializeObject<Elvanto.Arrangement.RootObject>(arrangementresult);
-
-                    newsong.data.lyrics = new List<object>
+                    newsong.data.lyrics.Add(arrangement.lyrics);
+                    if (arrangement.files.ToString().Length > 2)
                     {
-                        rootArrangement.arrangements.arrangement.First().lyrics
-                    };
-
-
-
-                    try
-                    {
-                        JObject fileses = (JObject)rootArrangement.arrangements.arrangement.First().files;
-
-
-                        if (fileses.HasValues)
+                        ProcessIndividualArrangementFiles(arrangement.id, elvantofiles);
+                        foreach (Elvanto.File flz in elvantofiles)
                         {
-
-                            // Individual call to get arrangement with files
-                            foreach(Elvanto.Arrangement.Arrangement arrangement in rootArrangement.arrangements.arrangement)
-                            {
-
-                                ProcessIndividualArrangementFiles(arrangement.id, elvantofiles);
-                            }
-
-                            foreach (Elvanto.File flz in elvantofiles)
-                            {
-                                logger.Info($"{flz.title} {flz.content}");
-                            }
+                            logger.Info($"{flz.title} {flz.content}");
                         }
-                    } catch (InvalidCastException ex)
-                    {
-
                     }
-                    
-
-
-
-
-
                 }
 
                 AddSongToFluro(newsong, elvantofiles);
@@ -564,83 +431,36 @@ namespace Elvanto2Fluro
 
                 if (file.type == "Video")
                 {
-                    if(file.content.Left(7) == "<iframe")
+                    if (file.content.Left(7) == "<iframe")
                     {
                         videoids.Add(FindVideoFromIFrame(file.content));
-                    } else
+                    }
+                    else
                     {
                         videoids.Add(AddVideoToFluro(file.content));
                     }
-                    
+
                 }
                 else
-                { 
-                    using (WebClient client = new WebClient())
+                {
+                    // add new sheet
+                    //download existing file
+                    HttpClient dlclient = new HttpClient();
+
+                    HttpResponseMessage response = new HttpResponseMessage();
+                    if (file.content.Left(7) == "<iframe")
                     {
-                        client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                        client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                        string searchstring = FluroChordChartPostURI + "/search/" + Uri.EscapeUriString(file.title).Replace("/", " ");
-
-                        string searchresult = client.DownloadString(searchstring);
-                        if (searchresult.Length >= 3)
+                        videoids.Add(FindVideoFromIFrame(file.content));
+                    }
+                    else
+                    {
+                        response = dlclient.GetAsync(file.content).Result;
+                        if (response.IsSuccessStatusCode)
                         {
-                            //found
-
-                            chordchartids.Add(GetFirstInstance<string>("_id", searchresult));
-
-                        }
-                        else
-                        {
-
-                            // add new sheet
-                            //download existing file
-                            HttpClient dlclient = new HttpClient();
-
-                            HttpResponseMessage response = new HttpResponseMessage();
-                            if (file.content.Left(7) == "<iframe")
-                            {
-                                videoids.Add(FindVideoFromIFrame(file.content));
-                            }
-                            else
-                            {
-                                response = dlclient.GetAsync(file.content).Result;
-                                if (response.IsSuccessStatusCode)
-                                {
-                                    //response.Content.ReadAsStringAsync().Result.Replace("\"", string.Empty);
-                                    //mybytearray = Convert.FromBase64String(result);
-                                    byte[] downloadedfile = response.Content.ReadAsByteArrayAsync().Result;
-                                    string filetype = "";
-                                    filetype = response.Content.Headers.ContentType.ToString();
-
-
-
-                                    Dictionary<string, object> postParameters = new Dictionary<string, object>();
-                                    SheetMusic sheet = new SheetMusic
-                                    {
-                                        title = file.title.Replace("/", " "),
-                                        realms = new List<string>()
-                                    };
-                                    sheet.realms.Add(FluroCreativeRealm);
-                                    sheet.definition = "sheetMusic";
-                                    string jsonsheet = JsonConvert.SerializeObject(sheet);
-
-                                    postParameters.Add("json", jsonsheet);
-                                    postParameters.Add("?returnPopulated", true);
-                                    postParameters.Add("file", new FormUpload.FileParameter(downloadedfile, FormUpload.GetFileName(file.content), filetype));
-                                    string userAgent = "Timothy's C# Migrator";
-                                    HttpWebResponse webResponse = FormUpload.MultipartFormDataPost(FluroFileUploadURI, userAgent, postParameters, FluroAPIKey);
-
-                                    StreamReader responseReader = new StreamReader(webResponse.GetResponseStream());
-                                    string fullResponse = responseReader.ReadToEnd();
-                                    logger.Debug(fullResponse);
-                                    webResponse.Close();
-                                    //need to parse the result and add it to the array
-                                    Fluro.File.RootObject returnedfile = JsonConvert.DeserializeObject<Fluro.File.RootObject>(fullResponse);
-                                    chordchartids.Add(returnedfile._id);
-                                }
-                            }
+                            chordchartids.Add(Util.UploadFiletoFluro(response, file, FluroCreativeRealm, FluroFileUploadURI));
                         }
                     }
+                        
                 }
             }
 
@@ -660,43 +480,123 @@ namespace Elvanto2Fluro
                 newsong.data.videos.Add(videoid);
             }
 
-            //now check for the Song
-            using (WebClient client = new WebClient())
-            {
-                newsong.title = newsong.title.Replace("/", " ");
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                string searchstring = FluroSongURI + "/search/" + Uri.EscapeUriString(newsong.title);
-                string searchresult = client.DownloadString(searchstring);
-                if (searchresult.Length >= 3)
-                {
-                    //found
-                    logger.Info("Song Found skipping.");
-                }
-                else
-                {
-                    newsong.realms = new List<Realm>();
-                    Realm creative = new Realm
-                    {
-                        _id = FluroCreativeRealm
-                    };
-                    newsong.realms.Add(creative);
-                    newsong.definition = "song";
-                    string upjson = JsonConvert.SerializeObject(newsong);
-                    logger.Info(upjson);
-                    using (WebClient upclient = new WebClient())
-                    {
-                        upclient.Headers[HttpRequestHeader.ContentType] = "application/json";
-                        upclient.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
 
-                        upclient.UploadString(FluroSongURI, "POST", upjson);
-                    }
-                }
-            }
+            newsong.realms = new List<Realm>();
+            Realm creative = new Realm
+            {
+                _id = FluroCreativeRealm
+            };
+            newsong.realms.Add(creative);
+            newsong.definition = "song";
+            Util.UploadToElvantoReturnJson(FluroSongURI, "POST", JsonConvert.SerializeObject(newsong));
+            
 
         }
 
-        private static string FindVideoFromIFrame(string htmltag)
+
+
+
+        /// <summary>
+        /// This adds a video to Fluro.  It does a few replaces as we cannot trust the information stored in Elvanto.
+        /// </summary>
+        /// <param name="videourl"></param>
+        /// <returns></returns>
+        private static string AddVideoToFluro(string videourl)
+        {
+
+            videourl = "https:" + videourl.Replace("\"", "-")
+                .Replace("embed/", "watch?v=")
+                .Replace("https:https:", "https:")
+                .Replace("https:http:", "https:")
+                .Replace("http:", "https:");
+
+            Fluro.Video video = new Fluro.Video
+            {
+                title = Util.GetYoutubeTitle(videourl),
+                external = new External
+                {
+                    youtube = videourl
+                },
+                realms = new List<Realm>(),
+                _type = "video",
+                assetType = "youtube"
+            };
+            Realm realm = new Realm
+            {
+                _id = FluroCreativeRealm
+            };
+            video.realms.Add(realm);
+
+            return Util.UploadToFluroReturnId(FluroVideoURI, "POST", JsonConvert.SerializeObject(video));
+
+        }
+
+        private static void ProcessIndividualArrangementFiles(string id, List<Elvanto.File> files)
+        {
+            
+            string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
+            string arrangementresult = Util.UploadToElvantoReturnJson(ElvantoSongIndividualArangementURI, "POST", poststring);
+
+            var rootArrangement = JsonConvert.DeserializeObject<Elvanto.IndividualArrangement.IndividualArrangementRootObject>(arrangementresult);
+            foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangement)
+            {
+                foreach (Elvanto.File file in arr.files.file)
+                {
+                    logger.Info($"Adding File {file.content}");
+                    files.Add(file);
+
+                    ProcessKeyFiles(id, files);
+                }
+
+            }
+
+            
+        }
+
+        private static void ProcessKeyFiles(string id, List<Elvanto.File> files)
+        {
+            string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
+            string keyresult = Util.UploadToElvantoReturnJson(ElvantoKeysURI, "POST", poststring);
+
+            Elvanto.Key.KeyRootObject rootkey = JsonConvert.DeserializeObject<Elvanto.Key.KeyRootObject>(keyresult);
+            foreach (Elvanto.Key.Key key in rootkey.keys.key)
+            {
+
+                if (key.files.ToString().Length > 2)
+                {
+                    ProcessIndividualKeyFiles(key.id, files);
+                }
+            }
+
+           
+        }
+
+        private static void ProcessIndividualKeyFiles(string id, List<Elvanto.File> files)
+        {
+            
+
+            string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
+            string keyresult = Util.UploadToElvantoReturnJson(ElvantoIndividualKeyURI, "POST", poststring);
+
+            var rootkey = JsonConvert.DeserializeObject<Elvanto.IndividualKey.RootObject>(keyresult);
+
+            foreach (Elvanto.IndividualKey.Key keys in rootkey.key)
+            {
+                foreach (Elvanto.File file in keys.files.file)
+                {
+                    logger.Info($"Adding File {file.content}");
+                    files.Add(file);
+                }
+            }
+            
+        }
+        
+        /// <summary>
+        /// This finds the video string from an iframe.  Elvanto stores iframes as links to Youtube.
+        /// </summary>
+        /// <param name="htmltag"></param>
+        /// <returns></returns>
+        public static string FindVideoFromIFrame(string htmltag)
         {
 
             string resultstring = "";
@@ -717,162 +617,11 @@ namespace Elvanto2Fluro
                 videourl = videourl.Replace("embed/", "watch?v=");
                 resultstring = AddVideoToFluro(videourl);
             }
-            
-
-            return resultstring;
-
-        }
-
-        private static string AddVideoToFluro(string videourl)
-        {
-
-            string resultstring = "";
-            videourl = "https:" + videourl.Replace("\"", "");
-            videourl = videourl.Replace("embed/", "watch?v=");
-            videourl = videourl.Replace("https:https:", "https:");
-            videourl = videourl.Replace("https:http:", "https:");
-            videourl = videourl.Replace("http:", "https:");
-
-            Fluro.Video video = new Fluro.Video();
-            video.title = Util.GetYoutubeTitle(videourl);
-            video.external = new External();
-            video.external.youtube = videourl;
-            video.realms = new List<Realm>();
-            Realm realm = new Realm();
-            realm._id = FluroCreativeRealm;
-            video.realms.Add(realm);
-            video._type = "video";
-            video.assetType = "youtube";
-
-
-            string upjson = JsonConvert.SerializeObject(video);
-            logger.Info(upjson);
-            using (WebClient upclient = new WebClient())
-            {
-                upclient.Headers[HttpRequestHeader.ContentType] = "application/json";
-                upclient.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-                logger.Info(upjson);
-                string uploadresult = upclient.UploadString(FluroVideoURI, "POST", upjson);
-
-                resultstring = GetFirstInstance<string>("_id", uploadresult);
-
-            }
 
 
             return resultstring;
 
         }
 
-        private static void ProcessIndividualArrangementFiles(string id, List<Elvanto.File> files)
-        {
-            Thread.Sleep(2000);
-            using (WebClient piuclient = new WebClient())
-            {
-                piuclient.UseDefaultCredentials = true;
-                piuclient.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                piuclient.Headers[HttpRequestHeader.ContentType] = "application/json";
-                logger.Info($"Getting Arrangement {id}");
-                string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
-                string arrangementresult = piuclient.UploadString(ElvantoSongIndividualArangementURI, "POST", poststring);
-
-                var rootArrangement = JsonConvert.DeserializeObject<Elvanto.IndividualArrangement.RootObject>(arrangementresult);
-                foreach (Elvanto.IndividualArrangement.Arrangement arr in rootArrangement.arrangement)
-                {
-                    foreach (Elvanto.File file in arr.files.file)
-                    {
-                        logger.Info($"Adding File {file.content}");
-                        files.Add(file);
-
-                        ProcessKeyFiles(id, files);
-                    }
-
-                }
-
-            }
-        }
-
-        private static void ProcessKeyFiles(string id, List<Elvanto.File> files)
-        {
-            Thread.Sleep(2000);
-            using (WebClient client = new WebClient())
-            {
-                
-                
-                client.UseDefaultCredentials = true;
-                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                logger.Info($"Getting Key Files for Arrangement {id}");
-                string poststring = "{\"arrangement_id\": \"" + id + "\",    \"files\": true}";
-                string keyresult = client.UploadString(ElvantoKeysURI, "POST", poststring);
-
-                var rootkey = JsonConvert.DeserializeObject<Elvanto.Key.RootObject>(keyresult);
-
-                foreach (Elvanto.Key.Key arr in rootkey.keys.key)
-                {
-                    try
-                    {
-                        JObject fileses = (JObject)arr.files;
-
-
-                        if (fileses.HasValues)
-                        {
-                            ProcessIndividualKeyFiles(arr.id, files);
-
-                            
-                        }
-                    } catch (InvalidCastException ex)
-                    {
-
-                    }
-
-                }
-
-            }
-        }
-
-        private static void ProcessIndividualKeyFiles(string id, List<Elvanto.File> files)
-        {
-            Thread.Sleep(2000);
-            using (WebClient client = new WebClient())
-            {
-                client.UseDefaultCredentials = true;
-                client.Credentials = new NetworkCredential(ElvantoAPIKey, "");
-                client.Headers[HttpRequestHeader.ContentType] = "application/json";
-                logger.Info($"Getting Key Files for Arrangement {id}");
-                string poststring = "{\"id\": \"" + id + "\",    \"files\": true}";
-                string keyresult = client.UploadString(ElvantoIndividualKeyURI, "POST", poststring);
-
-                var rootkey = JsonConvert.DeserializeObject<Elvanto.IndividualKey.RootObject>(keyresult);
-
-                foreach (Elvanto.IndividualKey.Key keys in rootkey.key)
-                {
-                    foreach (Elvanto.File file in keys.files.file)
-                    {
-                        logger.Info($"Adding File {file.content}");
-                        files.Add(file);
-                    }
-                }
-            }
-        }
-
-        public static T GetFirstInstance<T>(string propertyName, string json)
-        {
-            using (var stringReader = new StringReader(json))
-            using (var jsonReader = new JsonTextReader(stringReader))
-            {
-                while (jsonReader.Read())
-                {
-                    if (jsonReader.TokenType == JsonToken.PropertyName
-                        && (string)jsonReader.Value == propertyName)
-                    {
-                        jsonReader.Read();
-
-                        var serializer = new JsonSerializer();
-                        return serializer.Deserialize<T>(jsonReader);
-                    }
-                }
-                return default(T);
-            }
-        }
     }
 }

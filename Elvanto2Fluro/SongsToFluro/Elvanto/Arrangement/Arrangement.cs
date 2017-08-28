@@ -36,7 +36,7 @@ namespace Elvanto2Fluro.Elvanto.Arrangement
         public List<Arrangement> arrangement { get; set; }
     }
 
-    public class RootObject
+    public class ArrangementRootObject
     {
         public string generated_in { get; set; }
         public string status { get; set; }
