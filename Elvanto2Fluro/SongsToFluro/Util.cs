@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
 using System.Collections.Specialized;
 using NLog;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Elvanto2Fluro.Fluro;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 
 namespace Elvanto2Fluro
 {

@@ -1,19 +1,13 @@
 ﻿
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+
 using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-
-using System.Text;
-using System.Threading.Tasks;
 using Elvanto2Fluro.Elvanto;
-using System.Threading;
 using Elvanto2Fluro.Fluro;
 using System.Net.Http;
-using System.IO;
 using Elvanto2Fluro.Fluro.Family;
 using System.Text.RegularExpressions;
 using Elvanto2Fluro.Elvanto.GroupCollection;
@@ -38,7 +32,6 @@ namespace Elvanto2Fluro
 
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
-        private static string FluroChordChartPostURI = "https://apiv2.fluro.io/content/sheetMusic";
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
         private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
@@ -62,9 +55,9 @@ namespace Elvanto2Fluro
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            //logger.Info("==================================================Starting Songs=================================================");
-            //MigrateSongs();
-            //logger.Info("=====================================================End Songs===================================================");
+            logger.Info("==================================================Starting Songs=================================================");
+            MigrateSongs();
+            logger.Info("=====================================================End Songs===================================================");
             logger.Info("=================================================Starting People=================================================");
             MigratePeople();
             logger.Info("===================================================End People====================================================");
@@ -143,12 +136,13 @@ namespace Elvanto2Fluro
         private static void AddPersonToFluroGroup(string id, string teamId)
         {
 
-
             string returnId = Util.UploadToFluroReturnId(FluroOldMemberIdQuery + id, "GET", "");
+            if (returnId != null)
+            {
+                string jsontoupload = $"{{ \"_id\":\"{returnId}\"}}";
 
-            string jsontoupload = $"{{ \"_id\":\"{returnId}\"}}";
-
-            Util.UploadToFluroReturnJson(String.Format(FluroTeamJoinURI, teamId), "POST", jsontoupload);
+                Util.UploadToFluroReturnJson(String.Format(FluroTeamJoinURI, teamId), "POST", jsontoupload);
+            }
         }
 
 
