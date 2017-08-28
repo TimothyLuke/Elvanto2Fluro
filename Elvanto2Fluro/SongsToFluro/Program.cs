@@ -33,6 +33,7 @@ namespace Elvanto2Fluro
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
         private static string ElvantoPeopleURI = "https://api.elvanto.com/v1/people/getAll.json";
         private static string ElvantoMemberCategory = "a9802b8c-2e1b-11e2-9039-ef9e4c9f3a46";
+        private static string ElvantoNewMemberCategory = "a9809b26-2e1b-11e2-9039-ef9e4c9f3a46";
 
 
         private static string FluroSongURI = "https://apiv2.fluro.io/content/song";
@@ -48,7 +49,7 @@ namespace Elvanto2Fluro
         private static string FluroContentErrorTag = "59a136abe64e6d71468b90a0";
         private static string FluroVotingMember = "5936300a95402155f8a80346";
         private static string FluroChurchMember = "5936300005bf991296dabfa5";
-        private static string FluroNewPeople = "5923a8be2b5ab52ecd519126";
+        private static string FluroNewPeople = "5936301095402155f8a8040f";
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
@@ -246,15 +247,15 @@ namespace Elvanto2Fluro
                 contact.data.volunteer = true;
             }
 
-
+            if (person.category_id == ElvantoNewMemberCategory)
+            {
+                contact.tags.Add(FluroNewPeople);
+            }
             if (person.category_id == ElvantoMemberCategory)
             {
                 contact.tags.Add(FluroChurchMember);
             }
-            else
-            {
-                contact.tags.Add(FluroNewPeople);
-            }
+
 
             if (person.votingMember != null)
             {
@@ -417,7 +418,6 @@ namespace Elvanto2Fluro
 
             }
 
-            Console.ReadLine();
         }
 
         private static void AddSongToFluro(Fluro.RootObject newsong, List<Elvanto.File> files)
@@ -488,7 +488,7 @@ namespace Elvanto2Fluro
             };
             newsong.realms.Add(creative);
             newsong.definition = "song";
-            Util.UploadToElvantoReturnJson(FluroSongURI, "POST", JsonConvert.SerializeObject(newsong));
+            Util.UploadToFluroReturnJson(FluroSongURI, "POST", JsonConvert.SerializeObject(newsong));
             
 
         }

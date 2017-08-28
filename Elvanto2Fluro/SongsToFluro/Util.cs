@@ -58,7 +58,16 @@ namespace Elvanto2Fluro
 
             logger.Debug("(Fluro) In JSON:");
             logger.Debug(JsonString);
-            string stringFullOfJson = client.UploadString(FluroAPIURI, "PUT", JsonString);
+            string stringFullOfJson = "";
+            if (Method == "GET" && JsonString == "")
+            {
+                stringFullOfJson = client.DownloadString(FluroAPIURI);
+            }
+            else
+            {
+                stringFullOfJson = client.UploadString(FluroAPIURI, Method, JsonString);
+            }
+            
             logger.Debug("(Fluro) Return JSON:");
             logger.Debug(stringFullOfJson);
             return stringFullOfJson;
@@ -85,7 +94,7 @@ namespace Elvanto2Fluro
 
             logger.Debug("(Elvanto) In JSON:");
             logger.Debug(JsonString);
-            string stringFullOfJson = client.UploadString(ElvantoAPIURI, "PUT", JsonString);
+            string stringFullOfJson = client.UploadString(ElvantoAPIURI, Method, JsonString);
             logger.Debug("(Elvanto) Return JSON:");
             logger.Debug(stringFullOfJson);
             return stringFullOfJson;
@@ -125,6 +134,7 @@ namespace Elvanto2Fluro
 
         /// <summary>
         /// This gets teh YourTube Video title from YouTubes API.
+        /// The Key is stored in the static YoutubeAPIKey and is obtainable from https://console.developers.google.com/apis/dashboard
         /// </summary>
         /// <param name="url"></param>
         /// <returns></returns>
