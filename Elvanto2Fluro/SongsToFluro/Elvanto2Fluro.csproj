@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="Elvanto\Arrangement\Arrangement.cs" />
     <Compile Include="Elvanto\GroupCollection.cs" />
+    <Compile Include="Elvanto\Services.cs" />
     <Compile Include="Fluro\Family.cs" />
     <Compile Include="Elvanto\File.cs" />
     <Compile Include="Elvanto\Files.cs" />
@@ -80,6 +81,7 @@
     <Compile Include="Elvanto\People.cs" />
     <Compile Include="Fluro\FluroFile.cs" />
     <Compile Include="Fluro\FoundSheetMusic.cs" />
+    <Compile Include="Fluro\Service.cs" />
     <Compile Include="Fluro\Teams.cs" />
     <Compile Include="Fluro\Video.cs" />
     <Compile Include="FormUpload.cs" />

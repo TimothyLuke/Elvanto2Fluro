@@ -26,6 +26,7 @@ namespace Elvanto2Fluro
         private static string ElvantoKeysURI = "https://api.elvanto.com/v1/songs/keys/getAll.json";
         private static string ElvantoIndividualKeyURI = "https://api.elvanto.com/v1/songs/keys/getInfo.json";
         private static string ElvantoPeopleURI = "https://api.elvanto.com/v1/people/getAll.json";
+        private static string ElvantoServicesURI = "https://api.elvanto.com/v1/services/getAll.json";
         private static string ElvantoMemberCategory = "a9802b8c-2e1b-11e2-9039-ef9e4c9f3a46";
         private static string ElvantoNewMemberCategory = "a9809b26-2e1b-11e2-9039-ef9e4c9f3a46";
 
@@ -34,6 +35,7 @@ namespace Elvanto2Fluro
         private static string FluroFileUploadURI = "https://api.fluro.io/file/upload";
         private static string FluroFamilyURI = "https://apiv2.fluro.io/content/family";
         private static string FluroContactURI = "https://apiv2.fluro.io/content/contact";
+        private static string FluroContentURI = "https://apiv2.fluro.io/content";
         private static string FluroVideoURI = "https://apiv2.fluro.io/content/video";
         private static string FluroTeamURI = "https://apiv2.fluro.io/content/team";
         private static string FluroTeamJoinURI = "https://apiv2.fluro.io/teams/{0}/join";
@@ -46,6 +48,13 @@ namespace Elvanto2Fluro
 
         private static string FluroCreativeRealm = "5923eaf4319df62ecc6f8005";
         private static string FluroRidgehavenRealm = "599cd5ef983a8a5948613a00";
+
+        private static string Fluro9amServiceTrack = "5923a8be2b5ab52ecd519129";
+        private static string Fluro11amServiceTrack = "5923a8be2b5ab52ecd51912a";
+        private static string Fluro6pmServiceTrack = "5923a8be2b5ab52ecd51912c";
+        private static string FluroConnectGroupTrack = "59a3b55241e2305ae15b74e4";
+        private static string FluroEvent = "event";
+        private static string FluroService = "service";
 
         static void Main(string[] args)
         {
@@ -64,8 +73,92 @@ namespace Elvanto2Fluro
             logger.Info("=================================================Starting Groups=================================================");
             MigrateGroups();
             logger.Info("===================================================End Groups====================================================");
+            logger.Info("===============================================Starting Services=================================================");
+            MigrateServices();
+            logger.Info("=================================================End Services====================================================");
+
 
             Console.ReadLine();
+        }
+
+        private static void MigrateServices()
+        {
+            string Servicesresult = Util.UploadToElvantoReturnJson(ElvantoServicesURI, "POST", "{ \"fields\": [ \"series_name\",  \"service_times\", \"plans\", \"volunteers\", \"songs\", \"files\", \"notes\" ] , \"start\":\"2010-01-01\", \"end\":\"2018-12-31\"  }");
+            ServicesRootobject servicesRootobject = JsonConvert.DeserializeObject<ServicesRootobject>(Servicesresult);
+            foreach(Elvanto.Service service in servicesRootobject.services.service)
+            {
+                AddServiceToFluro(service);
+            }
+        }
+
+        private static void AddServiceToFluro(Elvanto.Service elvantoservice)
+        {
+            string fluroupoadURL = FluroContentURI + "/" + FluroEvent;
+            Fluro.Service fluroservice = new Fluro.Service();
+            
+            fluroservice._type = FluroEvent;
+            
+            fluroservice.realms = new List<string>();
+            fluroservice.realms.Add(FluroRidgehavenRealm);
+            fluroservice.title = elvantoservice.name;
+
+            if (elvantoservice.name.Contains("Connect"))
+            {
+                fluroservice.track = new Track();
+                fluroservice.track._id = FluroConnectGroupTrack;
+
+            } else
+            {
+                logger.Info(elvantoservice.name);
+                if (elvantoservice.name.Contains("Family"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro11amServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                    fluroservice._type = FluroEvent;
+                } else if (elvantoservice.name.Contains("Communion"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro11amServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                } else if (elvantoservice.name.Contains("Sunday Night"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro6pmServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                }
+                else if (elvantoservice.name.Contains("6"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro6pmServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                }
+                else if (elvantoservice.name.Contains("9"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro9amServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                }
+                else if (elvantoservice.name.Contains("11"))
+                {
+                    fluroservice.track = new Track();
+                    fluroservice.track._id = Fluro11amServiceTrack;
+                    fluroupoadURL = fluroupoadURL.Replace(FluroEvent, FluroService);
+                    fluroservice._type = FluroService;
+                }
+
+            }
+
+            fluroservice.status = "archived";
+
+            fluroservice.startDate = elvantoservice.service_times.service_time.First().starts;
+
+            Util.UploadToFluroReturnJson(fluroupoadURL, "POST", JsonConvert.SerializeObject(fluroservice));
         }
 
         static void MigrateGroups()
