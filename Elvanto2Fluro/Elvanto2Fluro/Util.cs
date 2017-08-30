@@ -50,7 +50,7 @@ namespace Elvanto2Fluro
             };
             client.Headers[HttpRequestHeader.ContentType] = "application/json";
             client.Headers[HttpRequestHeader.Authorization] = "Bearer " + FluroAPIKey;
-
+            
 
             logger.Debug("(Fluro) In JSON:");
             logger.Debug(JsonString);

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Elvanto2Fluro.Fluro
 {
 
-    public class Rootobject
+    public class ServiceRootobject
     {
         public List<Service> Property1 { get; set; }
     }
